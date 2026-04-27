@@ -1,113 +1,125 @@
 # Krizot App
 
-> **Shift Operations Platform** – A cross-platform Flutter application for shift managers and operations officers.
+Krizot is a cross-platform Flutter application for shift managers and operations officers. It provides a desktop-optimized administrative scheduler with dynamic station management.
 
 ## Features
 
-- 🗓️ **Dynamic Station Management** – Create, edit, and monitor operational stations
-- 📅 **Shift Scheduling** – Weekly grid view with drag-and-drop assignment
-- 📊 **Dashboard** – Real-time overview of staffing levels and critical alerts
-- 🔐 **Secure Auth** – JWT-based authentication with secure token storage
-- 📱 **Responsive** – Desktop-optimised with full mobile support
+- 🔐 **Secure Authentication** — JWT-based login with secure token storage
+- 🏗️ **Station Management** — Full CRUD for operational stations with desktop table and mobile card views
+- 📅 **Schedule Management** — Weekly grid view with shift assignment
+- 📊 **Dashboard** — Real-time stats and quick actions
+- 📱 **Responsive Design** — Desktop (1280px+), Tablet (900px+), Mobile (<900px)
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Framework | Flutter 3+ |
-| State | Riverpod 2 |
-| Navigation | GoRouter |
-| HTTP | Dio |
-| Storage | flutter_secure_storage |
-| Dates | intl |
+- **Framework**: Flutter 3+ (web, mobile, desktop)
+- **State Management**: Riverpod
+- **HTTP Client**: Dio with JWT interceptor
+- **Routing**: go_router
+- **Storage**: flutter_secure_storage
+- **Design**: Material 3 + Inter font
 
 ## Getting Started
 
 ### Prerequisites
 
-- Flutter SDK ≥ 3.10.0
-- Dart SDK ≥ 3.0.0
+- Flutter SDK 3.10+
+- Dart SDK 3.0+
+- Backend API running (see [krizot-backend](../krizot-backend))
 
 ### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/liorboyango/krizot-app.git
-cd krizot-app
-
 # Install dependencies
 flutter pub get
 
-# Run on Chrome (web)
+# Run on web (development)
 flutter run -d chrome
 
-# Run on desktop (macOS)
-flutter run -d macos
+# Run on desktop
+flutter run -d macos  # or windows/linux
+
+# Build for web
+flutter build web
 ```
 
 ### Configuration
 
-The API base URL defaults to `http://localhost:3000/api`. Override at build time:
+The API base URL defaults to `http://localhost:3000/api`. Override via:
 
 ```bash
-flutter run --dart-define=KRIZOT_API_URL=https://your-api.example.com/api
-```
+# Web
+flutter run -d chrome --dart-define=KRIZOT_API_URL=https://your-api.com/api
 
-### Running Tests
-
-```bash
-flutter test
+# Build
+flutter build web --dart-define=KRIZOT_API_URL=https://your-api.com/api
 ```
 
 ## Project Structure
 
 ```
 lib/
-├── main.dart             # Entry point – ProviderScope + KrizotApp
-├── app.dart              # Root widget – theme + GoRouter
-├── router/
-│   └── app_router.dart   # Route definitions + auth guard
+├── main.dart              # Entry point
+├── app.dart               # Root widget, routing, shell navigation
 ├── screens/
-│   ├── login_screen.dart
-│   ├── dashboard_screen.dart
-│   ├── stations_screen.dart
-│   └── schedule_screen.dart
+│   ├── login_screen.dart    # Authentication
+│   ├── dashboard_screen.dart # Overview stats
+│   └── stations_screen.dart  # Station CRUD
 ├── widgets/
-│   └── app_shell.dart    # Sidebar / bottom-nav shell
-├── services/
-│   ├── api_client.dart   # Dio HTTP client
-│   └── auth_service.dart # Login / logout / session restore
+│   ├── add_edit_station_modal.dart  # Station form modal
+│   ├── station_card.dart            # Mobile card view
+│   ├── status_chip.dart             # Status badge
+│   ├── loading_shimmer.dart         # Loading placeholders
+│   ├── empty_state.dart             # Empty list state
+│   └── error_banner.dart            # Error display
 ├── providers/
-│   └── auth_provider.dart
+│   ├── auth_provider.dart           # Auth state (Riverpod)
+│   └── stations_provider.dart       # Stations state (Riverpod)
+├── services/
+│   ├── api_client.dart              # Dio HTTP client
+│   ├── auth_service.dart            # Login/logout/session
+│   └── stations_service.dart        # Stations CRUD API
 ├── models/
-│   ├── user_model.dart
-│   ├── station_model.dart
-│   └── schedule_model.dart
+│   ├── user.dart                    # User model
+│   └── station.dart                 # Station model
 └── utils/
-    ├── app_colors.dart
-    ├── app_theme.dart
-    ├── breakpoints.dart
-    ├── constants.dart
-    ├── validators.dart
-    └── error_handler.dart
+    ├── app_colors.dart              # Color palette
+    ├── app_theme.dart               # Material theme
+    ├── breakpoints.dart             # Responsive breakpoints
+    ├── validators.dart              # Form validators
+    └── constants.dart               # App constants
 ```
 
-## Screens
+## Running Tests
 
-| Screen | Route | Description |
-|--------|-------|-------------|
-| Login | `/login` | Email + password authentication |
-| Dashboard | `/` | Stats overview + today's schedule |
-| Stations | `/stations` | Station CRUD management |
-| Schedule | `/schedule` | Weekly shift grid |
+```bash
+# Run all tests
+flutter test
 
-## Contributing
+# Run with coverage
+flutter test --coverage
+```
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/my-feature`)
-3. Commit your changes
-4. Open a pull request
+## API Integration
 
-## License
+The app connects to the Krizot backend REST API:
 
-MIT © Krizot
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/auth/login` | POST | Authenticate user |
+| `/api/auth/logout` | POST | Logout |
+| `/api/auth/me` | GET | Get current user |
+| `/api/stations` | GET | List stations |
+| `/api/stations` | POST | Create station |
+| `/api/stations/:id` | PUT | Update station |
+| `/api/stations/:id` | DELETE | Delete station |
+| `/api/stations/stats` | GET | Station statistics |
+
+## Design System
+
+- **Primary**: Deep Navy `#1A2B4A`
+- **Accent**: Electric Blue `#0D7CFF`
+- **Success**: Teal Green `#00B087`
+- **Warning**: Amber `#FFB020`
+- **Danger**: Red `#E53E3E`
+- **Font**: Inter (400, 500, 600, 700)
