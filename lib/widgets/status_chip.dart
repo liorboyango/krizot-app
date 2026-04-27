@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import '../models/station.dart';
 import '../utils/app_colors.dart';
 
-/// Shift status types.
-enum ShiftStatus { covered, open, critical }
-
-/// A colored status chip for shift/station status display.
+/// A colored status chip widget for displaying station or shift status.
+///
+/// Follows the Krizot design system with pill-shaped chips.
 class StatusChip extends StatelessWidget {
   final String label;
   final Color backgroundColor;
@@ -17,52 +17,47 @@ class StatusChip extends StatelessWidget {
     required this.textColor,
   });
 
-  /// Creates a chip from a [ShiftStatus] enum value.
-  factory StatusChip.fromStatus(ShiftStatus status) {
+  /// Create a chip from a [StationStatus].
+  factory StatusChip.fromStationStatus(StationStatus status) {
     switch (status) {
-      case ShiftStatus.covered:
-        return const StatusChip(
-          label: 'Covered',
+      case StationStatus.active:
+        return StatusChip(
+          label: 'Active',
           backgroundColor: AppColors.shiftCovered,
-          textColor: AppColors.shiftCoveredText,
+          textColor: AppColors.success,
         );
-      case ShiftStatus.open:
-        return const StatusChip(
-          label: 'Open',
-          backgroundColor: AppColors.shiftOpen,
-          textColor: AppColors.shiftOpenText,
-        );
-      case ShiftStatus.critical:
-        return const StatusChip(
-          label: 'Critical',
+      case StationStatus.closed:
+        return StatusChip(
+          label: 'Closed',
           backgroundColor: AppColors.shiftCritical,
-          textColor: AppColors.shiftCriticalText,
+          textColor: AppColors.danger,
         );
     }
   }
 
-  /// Creates a chip from a string status value.
-  factory StatusChip.fromString(String status) {
-    switch (status.toLowerCase()) {
-      case 'covered':
-        return StatusChip.fromStatus(ShiftStatus.covered);
-      case 'critical':
-        return StatusChip.fromStatus(ShiftStatus.critical);
-      case 'active':
-        return const StatusChip(
-          label: 'Active',
-          backgroundColor: AppColors.shiftCovered,
-          textColor: AppColors.shiftCoveredText,
-        );
-      case 'closed':
-        return const StatusChip(
-          label: 'Closed',
-          backgroundColor: Color(0xFFF0F0F0),
-          textColor: AppColors.textSecondary,
-        );
-      default:
-        return StatusChip.fromStatus(ShiftStatus.open);
-    }
+  /// Create a chip for shift coverage status.
+  factory StatusChip.covered() {
+    return const StatusChip(
+      label: 'Covered',
+      backgroundColor: AppColors.shiftCovered,
+      textColor: AppColors.success,
+    );
+  }
+
+  factory StatusChip.open() {
+    return const StatusChip(
+      label: 'Open',
+      backgroundColor: AppColors.shiftOpen,
+      textColor: AppColors.warning,
+    );
+  }
+
+  factory StatusChip.critical() {
+    return const StatusChip(
+      label: 'Critical',
+      backgroundColor: AppColors.shiftCritical,
+      textColor: AppColors.danger,
+    );
   }
 
   @override
