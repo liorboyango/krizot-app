@@ -1,230 +1,134 @@
+/// Riverpod providers for authentication state.
+///
+/// Exposes:
+/// - [authServiceProvider]   - AuthService singleton
+/// - [authStateProvider]     - AsyncNotifier managing login/logout lifecycle
+/// - [currentUserProvider]   - Derived provider for the current User
+library;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../utils/constants.dart';
 
-// ---------------------------------------------------------------------------
-// Secure storage provider
-// ---------------------------------------------------------------------------
-final secureStorageProvider = Provider<FlutterSecureStorage>(
-  (ref) => const FlutterSecureStorage(),
-);
+import '../models/user.dart';
+import '../models/api_response.dart';
+import '../services/auth_service.dart';
+import '../services/api_client.dart';
 
-// ---------------------------------------------------------------------------
-// Auth state
-// ---------------------------------------------------------------------------
-class AuthState {
-  final String? accessToken;
-  final String? refreshToken;
-  final Map<String, dynamic>? user;
-  final bool isAuthenticated;
-  final bool isLoading;
-  final String? error;
-
-  const AuthState({
-    this.accessToken,
-    this.refreshToken,
-    this.user,
-    this.isAuthenticated = false,
-    this.isLoading = false,
-    this.error,
-  });
-
-  AuthState copyWith({
-    String? accessToken,
-    String? refreshToken,
-    Map<String, dynamic>? user,
-    bool? isAuthenticated,
-    bool? isLoading,
-    String? error,
-  }) {
-    return AuthState(
-      accessToken: accessToken ?? this.accessToken,
-      refreshToken: refreshToken ?? this.refreshToken,
-      user: user ?? this.user,
-      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Auth notifier
-// ---------------------------------------------------------------------------
-class AuthNotifier extends StateNotifier<AuthState> {
-  final FlutterSecureStorage _storage;
-  final Dio _dio;
-
-  AuthNotifier(this._storage, this._dio) : super(const AuthState()) {
-    _loadStoredAuth();
-  }
-
-  Future<void> _loadStoredAuth() async {
-    state = state.copyWith(isLoading: true);
-    try {
-      final token = await _storage.read(key: AppConstants.tokenKey);
-      final refreshToken =
-          await _storage.read(key: AppConstants.refreshTokenKey);
-      if (token != null) {
-        state = state.copyWith(
-          accessToken: token,
-          refreshToken: refreshToken,
-          isAuthenticated: true,
-          isLoading: false,
-        );
-        // Attach token to dio
-        _dio.options.headers['Authorization'] = 'Bearer $token';
-      } else {
-        state = state.copyWith(isLoading: false);
-      }
-    } catch (_) {
-      state = state.copyWith(isLoading: false);
-    }
-  }
-
-  Future<void> login(String email, String password) async {
-    state = state.copyWith(isLoading: true, error: null);
-    try {
-      final response = await _dio.post(
-        '${AppConstants.apiBaseUrl}/auth/login',
-        data: {'email': email, 'password': password},
-      );
-      final data = response.data as Map<String, dynamic>;
-      if (data['success'] == true) {
-        final responseData = data['data'] as Map<String, dynamic>;
-        final token = responseData['token'] as String? ??
-            responseData['accessToken'] as String?;
-        final refreshToken = responseData['refreshToken'] as String?;
-        final user = responseData['user'] as Map<String, dynamic>?;
-
-        if (token != null) {
-          await _storage.write(key: AppConstants.tokenKey, value: token);
-          if (refreshToken != null) {
-            await _storage.write(
-                key: AppConstants.refreshTokenKey, value: refreshToken);
-          }
-          _dio.options.headers['Authorization'] = 'Bearer $token';
-          state = state.copyWith(
-            accessToken: token,
-            refreshToken: refreshToken,
-            user: user,
-            isAuthenticated: true,
-            isLoading: false,
-          );
-        } else {
-          state = state.copyWith(
-            isLoading: false,
-            error: 'Invalid response from server',
-          );
-        }
-      } else {
-        state = state.copyWith(
-          isLoading: false,
-          error: data['error']?['message'] ?? 'Login failed',
-        );
-      }
-    } on DioException catch (e) {
-      final message = e.response?.data?['error']?['message'] ??
-          e.response?.data?['message'] ??
-          'Network error. Please try again.';
-      state = state.copyWith(isLoading: false, error: message as String);
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'An unexpected error occurred',
-      );
-    }
-  }
-
-  Future<void> logout() async {
-    try {
-      await _dio.post('${AppConstants.apiBaseUrl}/auth/logout');
-    } catch (_) {
-      // Ignore logout API errors
-    }
-    await _storage.delete(key: AppConstants.tokenKey);
-    await _storage.delete(key: AppConstants.refreshTokenKey);
-    _dio.options.headers.remove('Authorization');
-    state = const AuthState();
-  }
-
-  Future<bool> refreshToken() async {
-    final refreshToken = state.refreshToken;
-    if (refreshToken == null) return false;
-    try {
-      final response = await _dio.post(
-        '${AppConstants.apiBaseUrl}/auth/refresh',
-        data: {'refreshToken': refreshToken},
-      );
-      final data = response.data as Map<String, dynamic>;
-      if (data['success'] == true) {
-        final newToken = data['data']?['token'] as String?;
-        if (newToken != null) {
-          await _storage.write(key: AppConstants.tokenKey, value: newToken);
-          _dio.options.headers['Authorization'] = 'Bearer $newToken';
-          state = state.copyWith(accessToken: newToken);
-          return true;
-        }
-      }
-    } catch (_) {}
-    return false;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Dio provider (singleton with auth interceptor)
-// ---------------------------------------------------------------------------
-final dioProvider = Provider<Dio>((ref) {
-  final dio = Dio(
-    BaseOptions(
-      baseUrl: AppConstants.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 30),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    ),
-  );
-
-  // Add logging interceptor in debug mode
-  dio.interceptors.add(
-    InterceptorsWrapper(
-      onError: (error, handler) async {
-        if (error.response?.statusCode == 401) {
-          // Try to refresh token
-          final authNotifier = ref.read(authProvider.notifier);
-          final refreshed = await authNotifier.refreshToken();
-          if (refreshed) {
-            // Retry the request
-            final opts = error.requestOptions;
-            final token = ref.read(authProvider).accessToken;
-            opts.headers['Authorization'] = 'Bearer $token';
-            try {
-              final response = await dio.fetch(opts);
-              return handler.resolve(response);
-            } catch (e) {
-              return handler.next(error);
-            }
-          } else {
-            // Logout on auth failure
-            ref.read(authProvider.notifier).logout();
-          }
-        }
-        return handler.next(error);
-      },
-    ),
-  );
-
-  return dio;
+// Service provider
+final authServiceProvider = Provider<AuthService>((ref) {
+  return AuthService();
 });
 
-// ---------------------------------------------------------------------------
-// Auth provider
-// ---------------------------------------------------------------------------
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  final storage = ref.watch(secureStorageProvider);
-  final dio = ref.watch(dioProvider);
-  return AuthNotifier(storage, dio);
+/// Represents the current authentication state.
+sealed class AuthState {
+  const AuthState();
+}
+
+/// User is not authenticated.
+final class AuthStateUnauthenticated extends AuthState {
+  const AuthStateUnauthenticated();
+}
+
+/// Authentication is in progress.
+final class AuthStateLoading extends AuthState {
+  const AuthStateLoading();
+}
+
+/// User is authenticated.
+final class AuthStateAuthenticated extends AuthState {
+  const AuthStateAuthenticated({required this.user});
+  final User user;
+}
+
+/// Authentication failed.
+final class AuthStateError extends AuthState {
+  const AuthStateError({required this.message});
+  final String message;
+}
+
+/// Manages the authentication lifecycle.
+class AuthNotifier extends AsyncNotifier<AuthState> {
+  late AuthService _authService;
+
+  @override
+  Future<AuthState> build() async {
+    _authService = ref.read(authServiceProvider);
+    return _checkStoredSession();
+  }
+
+  Future<AuthState> _checkStoredSession() async {
+    final hasToken = await _authService.hasStoredToken();
+    if (!hasToken) return const AuthStateUnauthenticated();
+
+    try {
+      final user = await _authService.getCurrentUser();
+      return AuthStateAuthenticated(user: user);
+    } on ApiException catch (e) {
+      if (e.isUnauthorized) {
+        final newToken = await ApiClient.instance.refreshAccessToken();
+        if (newToken != null) {
+          try {
+            final user = await _authService.getCurrentUser();
+            return AuthStateAuthenticated(user: user);
+          } catch (_) {}
+        }
+        await ApiClient.instance.clearTokens();
+      }
+      return const AuthStateUnauthenticated();
+    } catch (_) {
+      return const AuthStateUnauthenticated();
+    }
+  }
+
+  /// Attempt to log in with the given credentials.
+  Future<void> login(String email, String password) async {
+    state = const AsyncValue.data(AuthStateLoading());
+    try {
+      final result = await _authService.login(
+        LoginCredentials(email: email, password: password),
+      );
+      state = AsyncValue.data(AuthStateAuthenticated(user: result.user));
+    } on ApiException catch (e) {
+      state = AsyncValue.data(AuthStateError(message: e.userMessage));
+    } on NetworkException catch (e) {
+      state = AsyncValue.data(AuthStateError(message: e.message));
+    } catch (_) {
+      state = const AsyncValue.data(
+        AuthStateError(message: 'An unexpected error occurred. Please try again.'),
+      );
+    }
+  }
+
+  /// Log out the current user.
+  Future<void> logout() async {
+    await _authService.logout();
+    state = const AsyncValue.data(AuthStateUnauthenticated());
+  }
+
+  /// Re-fetch the current user profile from the API.
+  Future<void> refreshUser() async {
+    try {
+      final user = await _authService.getCurrentUser();
+      state = AsyncValue.data(AuthStateAuthenticated(user: user));
+    } on ApiException catch (e) {
+      if (e.isUnauthorized) {
+        state = const AsyncValue.data(AuthStateUnauthenticated());
+      }
+    } catch (_) {}
+  }
+}
+
+/// Provider for the [AuthNotifier].
+final authStateProvider =
+    AsyncNotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
+
+/// Convenience provider that returns the current [User] or null.
+final currentUserProvider = Provider<User?>((ref) {
+  final authState = ref.watch(authStateProvider).valueOrNull;
+  if (authState is AuthStateAuthenticated) return authState.user;
+  return null;
+});
+
+/// Returns true when the user is authenticated.
+final isAuthenticatedProvider = Provider<bool>((ref) {
+  return ref.watch(currentUserProvider) != null;
 });
