@@ -1,25 +1,28 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/user_model.dart';
+import '../models/user.dart';
 import '../services/auth_service.dart';
 
-/// Auth state representing the current authentication status.
+/// Auth state for the application.
 class AuthState {
-  final UserModel? user;
+  final User? user;
   final bool isLoading;
   final String? error;
+  final bool isInitialized;
 
   const AuthState({
     this.user,
     this.isLoading = false,
     this.error,
+    this.isInitialized = false,
   });
 
   bool get isAuthenticated => user != null;
 
   AuthState copyWith({
-    UserModel? user,
+    User? user,
     bool? isLoading,
     String? error,
+    bool? isInitialized,
     bool clearUser = false,
     bool clearError = false,
   }) {
@@ -27,62 +30,74 @@ class AuthState {
       user: clearUser ? null : (user ?? this.user),
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
+      isInitialized: isInitialized ?? this.isInitialized,
     );
+  }
+}
+
+/// Riverpod notifier for authentication state.
+class AuthNotifier extends StateNotifier<AuthState> {
+  final AuthService _authService;
+
+  AuthNotifier(this._authService) : super(const AuthState()) {
+    _initialize();
+  }
+
+  /// Restore session from secure storage on app start.
+  Future<void> _initialize() async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final user = await _authService.restoreSession();
+      state = AuthState(
+        user: user,
+        isInitialized: true,
+      );
+    } catch (_) {
+      state = const AuthState(isInitialized: true);
+    }
+  }
+
+  /// Login with email and password.
+  Future<bool> login(String email, String password) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final user = await _authService.login(email, password);
+      state = AuthState(user: user, isInitialized: true);
+      return true;
+    } on AuthException catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.message,
+        clearUser: false,
+      );
+      return false;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'An unexpected error occurred',
+      );
+      return false;
+    }
+  }
+
+  /// Logout and clear session.
+  Future<void> logout() async {
+    state = state.copyWith(isLoading: true);
+    await _authService.logout();
+    state = const AuthState(isInitialized: true);
+  }
+
+  /// Clear any error message.
+  void clearError() {
+    state = state.copyWith(clearError: true);
   }
 }
 
 /// Provider for [AuthService].
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 
-/// Async provider that checks for an existing session on startup.
-final authStateProvider =
-    AsyncNotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
-
-/// Notifier managing authentication state.
-class AuthNotifier extends AsyncNotifier<AuthState> {
-  late AuthService _authService;
-
-  @override
-  Future<AuthState> build() async {
-    _authService = ref.read(authServiceProvider);
-    // Check for existing session.
-    final hasSession = await _authService.hasSession();
-    if (hasSession) {
-      final user = await _authService.getCurrentUser();
-      if (user != null) {
-        return AuthState(user: user);
-      }
-    }
-    return const AuthState();
-  }
-
-  /// Performs login with email and password.
-  Future<void> login({
-    required String email,
-    required String password,
-  }) async {
-    state = const AsyncValue.loading();
-    try {
-      final user = await _authService.login(email: email, password: password);
-      state = AsyncValue.data(AuthState(user: user));
-    } on AuthException catch (e) {
-      state = AsyncValue.data(AuthState(error: e.message));
-    } catch (e) {
-      state = AsyncValue.data(AuthState(error: 'An unexpected error occurred'));
-    }
-  }
-
-  /// Performs logout and clears session.
-  Future<void> logout() async {
-    await _authService.logout();
-    state = const AsyncValue.data(AuthState());
-  }
-
-  /// Clears any auth error message.
-  void clearError() {
-    final current = state.valueOrNull;
-    if (current != null) {
-      state = AsyncValue.data(current.copyWith(clearError: true));
-    }
-  }
-}
+/// Provider for [AuthNotifier] and [AuthState].
+final authProvider =
+    StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+  return AuthNotifier(ref.watch(authServiceProvider));
+});
