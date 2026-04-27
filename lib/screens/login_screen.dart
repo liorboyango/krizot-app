@@ -5,8 +5,10 @@ import '../providers/auth_provider.dart';
 import '../utils/app_colors.dart';
 import '../utils/validators.dart';
 
-/// Login screen with email, password, and role selection.
-/// Centered card layout with navy gradient background.
+/// Login screen for the Krizot application.
+///
+/// Provides email/password authentication with role selection.
+/// Centered card layout with max-width 420px.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -14,109 +16,50 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen>
-    with SingleTickerProviderStateMixin {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
   bool _obscurePassword = true;
-  String _selectedRole = 'admin';
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    ));
-    _fadeController.forward();
-  }
 
   @override
   void dispose() {
-    _fadeController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
+  Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Clear any previous error
-    ref.read(authStateProvider.notifier).clearError();
-
-    await ref.read(authStateProvider.notifier).login(
-          email: _emailController.text,
-          password: _passwordController.text,
+    final success = await ref.read(authProvider.notifier).login(
+          _emailController.text.trim(),
+          _passwordController.text,
         );
 
-    if (!mounted) return;
-
-    final authState = ref.read(authStateProvider).valueOrNull;
-    if (authState?.isAuthenticated == true) {
+    if (success && mounted) {
       context.go('/dashboard');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authStateProvider);
-    final isLoading = authState.isLoading;
-    final errorMessage = authState.valueOrNull?.error;
+    final authState = ref.watch(authProvider);
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.primary,
-              AppColors.primaryLight,
-              Color(0xFF1E3A5F),
-            ],
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Logo & branding
-                      _buildBranding(),
-                      const SizedBox(height: 32),
-                      // Login card
-                      _buildLoginCard(
-                        isLoading: isLoading,
-                        errorMessage: errorMessage,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+      backgroundColor: AppColors.primary,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildLogo(),
+                const SizedBox(height: 32),
+                _buildCard(authState),
+              ],
             ),
           ),
         ),
@@ -124,28 +67,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
-  Widget _buildBranding() {
+  Widget _buildLogo() {
     return Column(
       children: [
-        // Logo icon
         Container(
           width: 64,
           height: 64,
           decoration: BoxDecoration(
             color: AppColors.accent,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.accent.withOpacity(0.4),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
           child: const Icon(
-            Icons.shield_outlined,
+            Icons.bolt,
             color: Colors.white,
-            size: 32,
+            size: 36,
           ),
         ),
         const SizedBox(height: 16),
@@ -159,23 +94,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           ),
         ),
         const SizedBox(height: 6),
-        Text(
+        const Text(
           'Shift Operations Platform',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
+            color: Color(0xB3FFFFFF),
             fontSize: 14,
             fontWeight: FontWeight.w400,
-            letterSpacing: 0.5,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildLoginCard({
-    required bool isLoading,
-    required String? errorMessage,
-  }) {
+  Widget _buildCard(AuthState authState) {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
@@ -183,9 +114,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 40,
-            offset: const Offset(0, 16),
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -194,7 +125,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Card header
             const Text(
               'Sign In',
               style: TextStyle(
@@ -211,51 +141,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 color: AppColors.textSecondary,
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Error banner
-            if (errorMessage != null) ...
+            if (authState.error != null) ...
               [
-                _ErrorBanner(message: errorMessage),
                 const SizedBox(height: 16),
+                _buildErrorBox(authState.error!),
               ],
-
+            const SizedBox(height: 24),
             // Email field
-            _buildFieldLabel('Email'),
+            const Text(
+              'Email',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            ),
             const SizedBox(height: 6),
             TextFormField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
-              autocorrect: false,
-              validator: Validators.email,
+              enabled: !authState.isLoading,
               decoration: const InputDecoration(
-                hintText: 'you@example.com',
-                prefixIcon: Icon(
-                  Icons.email_outlined,
-                  size: 18,
-                  color: AppColors.textMuted,
-                ),
+                hintText: 'admin@krizot.com',
+                prefixIcon: Icon(Icons.email_outlined, size: 18),
               ),
+              validator: Validators.email,
             ),
             const SizedBox(height: 16),
-
             // Password field
-            _buildFieldLabel('Password'),
+            const Text(
+              'Password',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            ),
             const SizedBox(height: 6),
             TextFormField(
               controller: _passwordController,
               obscureText: _obscurePassword,
               textInputAction: TextInputAction.done,
-              validator: Validators.password,
-              onFieldSubmitted: (_) => _handleLogin(),
+              enabled: !authState.isLoading,
+              onFieldSubmitted: (_) => _signIn(),
               decoration: InputDecoration(
                 hintText: '••••••••',
-                prefixIcon: const Icon(
-                  Icons.lock_outline,
-                  size: 18,
-                  color: AppColors.textMuted,
-                ),
+                prefixIcon: const Icon(Icons.lock_outline, size: 18),
                 suffixIcon: IconButton(
                   onPressed: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
@@ -264,36 +196,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         ? Icons.visibility_outlined
                         : Icons.visibility_off_outlined,
                     size: 18,
-                    color: AppColors.textMuted,
                   ),
-                  tooltip: _obscurePassword ? 'Show password' : 'Hide password',
+                  color: AppColors.textSecondary,
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-
-            // Role selector
-            _buildFieldLabel('Role'),
-            const SizedBox(height: 6),
-            _RoleSelector(
-              selectedRole: _selectedRole,
-              onChanged: (role) => setState(() => _selectedRole = role),
+              validator: Validators.password,
             ),
             const SizedBox(height: 24),
-
-            // Sign In button
+            // Sign in button
             SizedBox(
               height: 48,
               child: ElevatedButton(
-                onPressed: isLoading ? null : _handleLogin,
+                onPressed: authState.isLoading ? null : _signIn,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accent,
-                  disabledBackgroundColor: AppColors.accent.withOpacity(0.6),
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: isLoading
+                child: authState.isLoading
                     ? const SizedBox(
                         width: 20,
                         height: 20,
@@ -307,30 +229,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
                         ),
                       ),
               ),
             ),
             const SizedBox(height: 16),
-
-            // Forgot password
             Center(
               child: TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Password reset coming soon'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
+                onPressed: () {},
                 child: const Text(
                   'Forgot password?',
                   style: TextStyle(
-                    color: AppColors.accent,
                     fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                    color: AppColors.accent,
                   ),
                 ),
               ),
@@ -341,134 +252,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
-  Widget _buildFieldLabel(String label) {
-    return Text(
-      label,
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
-      ),
-    );
-  }
-}
-
-/// Role selector widget with toggle buttons.
-class _RoleSelector extends StatelessWidget {
-  final String selectedRole;
-  final ValueChanged<String> onChanged;
-
-  const _RoleSelector({
-    required this.selectedRole,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _RoleButton(
-          label: 'Admin',
-          isSelected: selectedRole == 'admin',
-          onTap: () => onChanged('admin'),
-        ),
-        const SizedBox(width: 12),
-        _RoleButton(
-          label: 'Manager',
-          isSelected: selectedRole == 'manager',
-          onTap: () => onChanged('manager'),
-        ),
-      ],
-    );
-  }
-}
-
-class _RoleButton extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _RoleButton({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          height: 44,
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.accent : AppColors.background,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected ? AppColors.accent : AppColors.border,
-              width: isSelected ? 2 : 1,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                isSelected
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_unchecked,
-                size: 16,
-                color: isSelected ? Colors.white : AppColors.textSecondary,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: isSelected ? Colors.white : AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Error banner displayed above the form on login failure.
-class _ErrorBanner extends StatelessWidget {
-  final String message;
-
-  const _ErrorBanner({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildErrorBox(String error) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.shiftCritical,
+        color: AppColors.danger.withOpacity(0.08),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppColors.danger.withOpacity(0.3)),
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.error_outline,
-            size: 18,
-            color: AppColors.danger,
-          ),
-          const SizedBox(width: 10),
+          const Icon(Icons.error_outline, size: 16, color: AppColors.danger),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              message,
+              error,
               style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.danger,
-                fontWeight: FontWeight.w500,
               ),
             ),
+          ),
+          IconButton(
+            onPressed: () =>
+                ref.read(authProvider.notifier).clearError(),
+            icon: const Icon(Icons.close, size: 14),
+            color: AppColors.danger,
+            padding: EdgeInsets.zero,
+            constraints:
+                const BoxConstraints(minWidth: 20, minHeight: 20),
           ),
         ],
       ),

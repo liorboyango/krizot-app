@@ -1,29 +1,29 @@
 name: krizot_app
-description: Krizot - Administrative Scheduler for Shift Managers
-publish_to: 'none'
+description: Krizot - Shift Operations Platform. Administrative scheduler for shift managers.
 version: 1.0.0+1
+publish_to: 'none'
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.10.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # State Management
+  # State management
   flutter_riverpod: ^2.4.9
-  riverpod_annotation: ^2.3.3
 
-  # Navigation
-  go_router: ^13.2.0
+  # HTTP client with interceptors
+  dio: ^5.4.0
 
-  # HTTP Client
-  dio: ^5.4.1
-
-  # Secure Storage
+  # Secure token storage
   flutter_secure_storage: ^9.0.0
 
-  # Date/Time
+  # Routing
+  go_router: ^13.2.0
+
+  # Date formatting
   intl: ^0.19.0
 
   # Icons
@@ -34,10 +34,10 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^3.0.0
   build_runner: ^2.4.8
-  riverpod_generator: ^2.3.9
 
 flutter:
   uses-material-design: true
+
   fonts:
     - family: Inter
       fonts:
@@ -49,5 +49,6 @@ flutter:
           weight: 600
         - asset: assets/fonts/Inter-Bold.ttf
           weight: 700
+
   assets:
-    - assets/fonts/
+    - assets/images/
