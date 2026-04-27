@@ -1,14 +1,15 @@
-/// Station model representing a work station in the Krizot system.
+/// Station model representing a work station managed by Krizot.
 ///
-/// Maps to the backend Station entity with full CRUD support.
+/// Maps to the backend Station schema:
+/// { id, name, location, capacity, status, notes, scheduleCount, createdAt, updatedAt }
 library;
 
-/// Represents the status of a station.
+/// Operational status of a station.
 enum StationStatus {
   active,
   closed;
 
-  /// Convert from API string value.
+  /// Parse from API string (case-insensitive).
   static StationStatus fromString(String value) {
     switch (value.toUpperCase()) {
       case 'ACTIVE':
@@ -20,7 +21,7 @@ enum StationStatus {
     }
   }
 
-  /// Convert to API string value.
+  /// Serialise to the API string value.
   String toApiString() {
     switch (this) {
       case StationStatus.active:
@@ -41,18 +42,8 @@ enum StationStatus {
   }
 }
 
-/// Station data model.
+/// Immutable data class for a Krizot station.
 class Station {
-  final String id;
-  final String name;
-  final String location;
-  final int capacity;
-  final StationStatus status;
-  final String? notes;
-  final int scheduleCount;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-
   const Station({
     required this.id,
     required this.name,
@@ -61,41 +52,49 @@ class Station {
     required this.status,
     this.notes,
     this.scheduleCount = 0,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
   });
 
-  /// Create a Station from a JSON map (API response).
+  final String id;
+  final String name;
+  final String location;
+  final int capacity;
+  final StationStatus status;
+  final String? notes;
+  final int scheduleCount;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  /// Construct from a JSON map returned by the API.
   factory Station.fromJson(Map<String, dynamic> json) {
     return Station(
       id: json['id'] as String,
       name: json['name'] as String,
       location: json['location'] as String,
       capacity: (json['capacity'] as num).toInt(),
-      status: StationStatus.fromString(json['status'] as String? ?? 'ACTIVE'),
+      status: StationStatus.fromString((json['status'] as String?) ?? 'ACTIVE'),
       notes: json['notes'] as String?,
       scheduleCount: (json['scheduleCount'] as num?)?.toInt() ?? 0,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'] as String)
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'] as String)
+          : null,
     );
   }
 
-  /// Convert to JSON map for API requests.
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'location': location,
-      'capacity': capacity,
-      'status': status.toApiString(),
-      if (notes != null) 'notes': notes,
-      'scheduleCount': scheduleCount,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-    };
-  }
+  /// Serialise to a JSON map for API requests (create/update).
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'location': location,
+        'capacity': capacity,
+        'status': status.toApiString(),
+        if (notes != null) 'notes': notes,
+      };
 
-  /// Create a copy with updated fields.
+  /// Create a copy with optional field overrides.
   Station copyWith({
     String? id,
     String? name,
@@ -123,7 +122,9 @@ class Station {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Station && runtimeType == other.runtimeType && id == other.id;
+      other is Station &&
+          runtimeType == other.runtimeType &&
+          id == other.id;
 
   @override
   int get hashCode => id.hashCode;
@@ -133,43 +134,19 @@ class Station {
       'Station(id: $id, name: $name, location: $location, capacity: $capacity, status: $status)';
 }
 
-/// Pagination metadata from API responses.
-class PaginationMeta {
-  final int page;
-  final int limit;
-  final int total;
-  final int totalPages;
-
-  const PaginationMeta({
-    required this.page,
-    required this.limit,
-    required this.total,
-    required this.totalPages,
-  });
-
-  factory PaginationMeta.fromJson(Map<String, dynamic> json) {
-    return PaginationMeta(
-      page: (json['page'] as num).toInt(),
-      limit: (json['limit'] as num).toInt(),
-      total: (json['total'] as num).toInt(),
-      totalPages: (json['totalPages'] as num).toInt(),
-    );
-  }
-}
-
-/// Station stats from /api/stations/stats.
+/// Stats returned by GET /api/stations/stats.
 class StationStats {
-  final int total;
-  final int active;
-  final int closed;
-  final int totalCapacity;
-
   const StationStats({
     required this.total,
     required this.active,
     required this.closed,
     required this.totalCapacity,
   });
+
+  final int total;
+  final int active;
+  final int closed;
+  final int totalCapacity;
 
   factory StationStats.fromJson(Map<String, dynamic> json) {
     return StationStats(
@@ -179,4 +156,8 @@ class StationStats {
       totalCapacity: (json['totalCapacity'] as num).toInt(),
     );
   }
+
+  @override
+  String toString() =>
+      'StationStats(total: $total, active: $active, closed: $closed, totalCapacity: $totalCapacity)';
 }

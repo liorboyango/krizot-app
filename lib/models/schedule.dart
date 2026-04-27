@@ -1,82 +1,76 @@
-/// Schedule model representing a shift assignment
+/// Schedule model representing a shift assignment.
+///
+/// Maps to the backend Schedule schema:
+/// { id, stationId, userId, startTime, endTime, notes, station, user }
+library;
+
+import 'user.dart';
+import 'station.dart';
+
+/// Immutable data class for a Krizot schedule entry.
 class Schedule {
+  const Schedule({
+    required this.id,
+    required this.stationId,
+    required this.startTime,
+    required this.endTime,
+    this.userId,
+    this.notes,
+    this.station,
+    this.user,
+  });
+
   final String id;
   final String stationId;
   final String? userId;
   final DateTime startTime;
   final DateTime endTime;
   final String? notes;
-  final ScheduleStatus status;
-  final StationInfo? station;
-  final UserInfo? user;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
 
-  const Schedule({
-    required this.id,
-    required this.stationId,
-    this.userId,
-    required this.startTime,
-    required this.endTime,
-    this.notes,
-    this.status = ScheduleStatus.open,
-    this.station,
-    this.user,
-    this.createdAt,
-    this.updatedAt,
-  });
+  /// Nested station object (populated in some responses).
+  final Station? station;
 
+  /// Nested user object (populated in some responses).
+  final User? user;
+
+  /// Whether this shift has an assigned user.
+  bool get isAssigned => userId != null && userId!.isNotEmpty;
+
+  /// Shift duration in hours.
+  double get durationHours =>
+      endTime.difference(startTime).inMinutes / 60.0;
+
+  /// Construct from a JSON map returned by the API.
   factory Schedule.fromJson(Map<String, dynamic> json) {
     return Schedule(
       id: json['id'] as String,
-      stationId: json['stationId'] as String,
+      stationId: (json['stationId'] as String?) ??
+          (json['station'] != null
+              ? (json['station'] as Map<String, dynamic>)['id'] as String
+              : ''),
       userId: json['userId'] as String?,
       startTime: DateTime.parse(json['startTime'] as String),
       endTime: DateTime.parse(json['endTime'] as String),
       notes: json['notes'] as String?,
-      status: _parseStatus(json),
       station: json['station'] != null
-          ? StationInfo.fromJson(json['station'] as Map<String, dynamic>)
+          ? Station.fromJson(json['station'] as Map<String, dynamic>)
           : null,
       user: json['user'] != null
-          ? UserInfo.fromJson(json['user'] as Map<String, dynamic>)
-          : null,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
-          : null,
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'] as String)
+          ? User.fromJson(json['user'] as Map<String, dynamic>)
           : null,
     );
   }
 
-  static ScheduleStatus _parseStatus(Map<String, dynamic> json) {
-    // Derive status from userId presence or explicit status field
-    if (json['status'] != null) {
-      switch (json['status'] as String) {
-        case 'CRITICAL':
-          return ScheduleStatus.critical;
-        case 'COVERED':
-          return ScheduleStatus.covered;
-        case 'OPEN':
-        default:
-          return ScheduleStatus.open;
-      }
-    }
-    return json['userId'] != null ? ScheduleStatus.covered : ScheduleStatus.open;
-  }
+  /// Serialise to a JSON map for API create requests.
+  Map<String, dynamic> toJson() => {
+        'stationId': stationId,
+        if (userId != null) 'userId': userId,
+        'startTime': startTime.toIso8601String(),
+        'endTime': endTime.toIso8601String(),
+        if (notes != null) 'notes': notes,
+      };
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'stationId': stationId,
-      if (userId != null) 'userId': userId,
-      'startTime': startTime.toIso8601String(),
-      'endTime': endTime.toIso8601String(),
-      if (notes != null) 'notes': notes,
-    };
-  }
-
+  /// Create a copy with optional field overrides.
   Schedule copyWith({
     String? id,
     String? stationId,
@@ -84,9 +78,8 @@ class Schedule {
     DateTime? startTime,
     DateTime? endTime,
     String? notes,
-    ScheduleStatus? status,
-    StationInfo? station,
-    UserInfo? user,
+    Station? station,
+    User? user,
   }) {
     return Schedule(
       id: id ?? this.id,
@@ -95,91 +88,131 @@ class Schedule {
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       notes: notes ?? this.notes,
-      status: status ?? this.status,
       station: station ?? this.station,
       user: user ?? this.user,
     );
   }
 
-  String get shiftTimeLabel {
-    final start = _formatTime(startTime);
-    final end = _formatTime(endTime);
-    return '$start-$end';
-  }
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Schedule &&
+          runtimeType == other.runtimeType &&
+          id == other.id;
 
-  String _formatTime(DateTime dt) {
-    final h = dt.hour.toString().padLeft(2, '0');
-    final m = dt.minute.toString().padLeft(2, '0');
-    return '$h:$m';
-  }
+  @override
+  int get hashCode => id.hashCode;
 
-  bool get isCovered => userId != null;
-  bool get isOpen => userId == null && status != ScheduleStatus.critical;
-  bool get isCritical => status == ScheduleStatus.critical;
+  @override
+  String toString() =>
+      'Schedule(id: $id, stationId: $stationId, userId: $userId, '
+      'startTime: $startTime, endTime: $endTime)';
 }
 
-enum ScheduleStatus { covered, open, critical }
-
-/// Lightweight station info embedded in schedule responses
-class StationInfo {
-  final String id;
-  final String name;
-  final String location;
-
-  const StationInfo({
-    required this.id,
-    required this.name,
-    required this.location,
+/// Stats returned by GET /api/schedules/stats.
+class ScheduleStats {
+  const ScheduleStats({
+    required this.totalStations,
+    required this.onDuty,
+    required this.openShifts,
+    required this.criticalShifts,
+    this.activeStations,
+    this.date,
+    this.todaySchedules,
   });
 
-  factory StationInfo.fromJson(Map<String, dynamic> json) {
-    return StationInfo(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      location: json['location'] as String? ?? '',
+  final int totalStations;
+  final int onDuty;
+  final int openShifts;
+  final int criticalShifts;
+  final int? activeStations;
+  final String? date;
+  final List<Schedule>? todaySchedules;
+
+  factory ScheduleStats.fromJson(Map<String, dynamic> json) {
+    final List<Schedule>? todaySchedules =
+        json['todaySchedules'] != null
+            ? (json['todaySchedules'] as List<dynamic>)
+                .map((e) => Schedule.fromJson(e as Map<String, dynamic>))
+                .toList()
+            : null;
+
+    return ScheduleStats(
+      totalStations: (json['totalStations'] as num?)?.toInt() ?? 0,
+      onDuty: (json['onDuty'] as num?)?.toInt() ??
+          (json['onDutyNow'] as num?)?.toInt() ??
+          0,
+      openShifts: (json['openShifts'] as num?)?.toInt() ??
+          (json['openShiftsToday'] as num?)?.toInt() ??
+          0,
+      criticalShifts: (json['criticalShifts'] as num?)?.toInt() ?? 0,
+      activeStations: (json['activeStations'] as num?)?.toInt(),
+      date: json['date'] as String?,
+      todaySchedules: todaySchedules,
+    );
+  }
+
+  @override
+  String toString() =>
+      'ScheduleStats(totalStations: $totalStations, onDuty: $onDuty, '
+      'openShifts: $openShifts, criticalShifts: $criticalShifts)';
+}
+
+/// A single day entry in the weekly grid.
+class WeekDay {
+  const WeekDay({
+    required this.date,
+    required this.dayName,
+    this.index,
+  });
+
+  final String date;
+  final String dayName;
+  final int? index;
+
+  factory WeekDay.fromJson(Map<String, dynamic> json) {
+    return WeekDay(
+      date: json['date'] as String,
+      dayName: json['dayName'] as String,
+      index: json['index'] as int?,
     );
   }
 }
 
-/// Lightweight user info embedded in schedule responses
-class UserInfo {
-  final String id;
-  final String name;
-  final String email;
-  final String? role;
-
-  const UserInfo({
-    required this.id,
-    required this.name,
-    required this.email,
-    this.role,
+/// A station row in the weekly schedule grid.
+class WeeklyGridRow {
+  const WeeklyGridRow({
+    required this.station,
+    required this.days,
   });
 
-  factory UserInfo.fromJson(Map<String, dynamic> json) {
-    return UserInfo(
-      id: json['id'] as String,
-      name: json['name'] as String? ?? json['email'] as String,
-      email: json['email'] as String,
-      role: json['role'] as String?,
-    );
-  }
+  final Station station;
 
-  String get initials {
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return name.isNotEmpty ? name[0].toUpperCase() : '?';
+  /// Map of day index (0-6) → list of schedules for that day.
+  final Map<int, List<Schedule>> days;
+
+  factory WeeklyGridRow.fromJson(Map<String, dynamic> json) {
+    final stationJson = json['station'] as Map<String, dynamic>;
+    final daysJson = json['days'] as Map<String, dynamic>;
+
+    final Map<int, List<Schedule>> days = {};
+    daysJson.forEach((key, value) {
+      final index = int.tryParse(key) ?? 0;
+      final scheduleList = (value as List<dynamic>)
+          .map((e) => Schedule.fromJson(e as Map<String, dynamic>))
+          .toList();
+      days[index] = scheduleList;
+    });
+
+    return WeeklyGridRow(
+      station: Station.fromJson(stationJson),
+      days: days,
+    );
   }
 }
 
-/// Weekly grid data returned by GET /api/schedules/week
+/// Full weekly schedule grid response.
 class WeeklySchedule {
-  final DateTime weekStart;
-  final DateTime weekEnd;
-  final List<DayInfo> days;
-  final List<StationWeekRow> grid;
-
   const WeeklySchedule({
     required this.weekStart,
     required this.weekEnd,
@@ -187,93 +220,50 @@ class WeeklySchedule {
     required this.grid,
   });
 
+  final String weekStart;
+  final String weekEnd;
+  final List<WeekDay> days;
+  final List<WeeklyGridRow> grid;
+
   factory WeeklySchedule.fromJson(Map<String, dynamic> json) {
-    final daysJson = json['days'] as List<dynamic>? ?? [];
-    final gridJson = json['grid'] as List<dynamic>? ?? [];
+    final daysList = (json['days'] as List<dynamic>)
+        .map((e) => WeekDay.fromJson(e as Map<String, dynamic>))
+        .toList();
+
+    final gridList = (json['grid'] as List<dynamic>)
+        .map((e) => WeeklyGridRow.fromJson(e as Map<String, dynamic>))
+        .toList();
+
     return WeeklySchedule(
-      weekStart: DateTime.parse(json['weekStart'] as String),
-      weekEnd: DateTime.parse(json['weekEnd'] as String),
-      days: daysJson
-          .map((d) => DayInfo.fromJson(d as Map<String, dynamic>))
-          .toList(),
-      grid: gridJson
-          .map((g) => StationWeekRow.fromJson(g as Map<String, dynamic>))
-          .toList(),
+      weekStart: json['weekStart'] as String,
+      weekEnd: json['weekEnd'] as String,
+      days: daysList,
+      grid: gridList,
     );
   }
 }
 
-class DayInfo {
-  final int index;
-  final DateTime date;
-  final String dayName;
-
-  const DayInfo({
-    required this.index,
-    required this.date,
-    required this.dayName,
+/// A single assignment request for bulk assign.
+class AssignmentRequest {
+  const AssignmentRequest({
+    this.scheduleId,
+    this.stationId,
+    required this.userId,
+    this.startTime,
+    this.endTime,
   });
 
-  factory DayInfo.fromJson(Map<String, dynamic> json) {
-    return DayInfo(
-      index: json['index'] as int? ?? 0,
-      date: DateTime.parse(json['date'] as String),
-      dayName: json['dayName'] as String? ?? '',
-    );
-  }
-}
+  final String? scheduleId;
+  final String? stationId;
+  final String userId;
+  final DateTime? startTime;
+  final DateTime? endTime;
 
-class StationWeekRow {
-  final StationInfo station;
-  /// Map from day index (0-6) to list of schedules
-  final Map<int, List<Schedule>> days;
-
-  const StationWeekRow({
-    required this.station,
-    required this.days,
-  });
-
-  factory StationWeekRow.fromJson(Map<String, dynamic> json) {
-    final stationJson = json['station'] as Map<String, dynamic>;
-    final daysJson = json['days'] as Map<String, dynamic>? ?? {};
-    final daysMap = <int, List<Schedule>>{};
-    daysJson.forEach((key, value) {
-      final dayIndex = int.tryParse(key) ?? 0;
-      final schedulesList = (value as List<dynamic>)
-          .map((s) => Schedule.fromJson(s as Map<String, dynamic>))
-          .toList();
-      daysMap[dayIndex] = schedulesList;
-    });
-    return StationWeekRow(
-      station: StationInfo.fromJson(stationJson),
-      days: daysMap,
-    );
-  }
-}
-
-/// Schedule stats returned by GET /api/schedules/stats
-class ScheduleStats {
-  final int totalStations;
-  final int activeStations;
-  final int onDuty;
-  final int openShifts;
-  final int criticalShifts;
-
-  const ScheduleStats({
-    required this.totalStations,
-    required this.activeStations,
-    required this.onDuty,
-    required this.openShifts,
-    required this.criticalShifts,
-  });
-
-  factory ScheduleStats.fromJson(Map<String, dynamic> json) {
-    return ScheduleStats(
-      totalStations: json['totalStations'] as int? ?? 0,
-      activeStations: json['activeStations'] as int? ?? 0,
-      onDuty: (json['onDuty'] ?? json['onDutyNow']) as int? ?? 0,
-      openShifts: (json['openShifts'] ?? json['openShiftsToday']) as int? ?? 0,
-      criticalShifts: json['criticalShifts'] as int? ?? 0,
-    );
-  }
+  Map<String, dynamic> toJson() => {
+        if (scheduleId != null) 'scheduleId': scheduleId,
+        if (stationId != null) 'stationId': stationId,
+        'userId': userId,
+        if (startTime != null) 'startTime': startTime!.toIso8601String(),
+        if (endTime != null) 'endTime': endTime!.toIso8601String(),
+      };
 }
