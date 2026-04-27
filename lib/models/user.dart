@@ -1,13 +1,15 @@
-/// User model for the Krizot application.
+/// User model representing an authenticated user or staff member.
 ///
-/// Represents an authenticated user with role-based access.
+/// Maps to the backend User schema:
+/// { id, email, name, role }
 library;
 
-/// User roles in the system.
+/// Roles supported by the Krizot platform.
 enum UserRole {
   admin,
   manager;
 
+  /// Parse a role string from the API.
   static UserRole fromString(String value) {
     switch (value.toLowerCase()) {
       case 'admin':
@@ -19,6 +21,17 @@ enum UserRole {
     }
   }
 
+  /// Serialise to the API string value.
+  String toApiString() {
+    switch (this) {
+      case UserRole.admin:
+        return 'ADMIN';
+      case UserRole.manager:
+        return 'MANAGER';
+    }
+  }
+
+  /// Human-readable label.
   String get label {
     switch (this) {
       case UserRole.admin:
@@ -27,17 +40,10 @@ enum UserRole {
         return 'Manager';
     }
   }
-
-  bool get isAdmin => this == UserRole.admin;
 }
 
-/// Authenticated user data model.
+/// Immutable data class for a Krizot user.
 class User {
-  final String id;
-  final String email;
-  final String name;
-  final UserRole role;
-
   const User({
     required this.id,
     required this.email,
@@ -45,24 +51,30 @@ class User {
     required this.role,
   });
 
+  final String id;
+  final String email;
+  final String name;
+  final UserRole role;
+
+  /// Construct from a JSON map returned by the API.
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'] as String,
       email: json['email'] as String,
-      name: json['name'] as String? ?? json['email'] as String,
-      role: UserRole.fromString(json['role'] as String? ?? 'manager'),
+      name: (json['name'] as String?) ?? '',
+      role: UserRole.fromString((json['role'] as String?) ?? 'manager'),
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'email': email,
-      'name': name,
-      'role': role.name,
-    };
-  }
+  /// Serialise to a JSON map for API requests.
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'email': email,
+        'name': name,
+        'role': role.toApiString(),
+      };
 
+  /// Create a copy with optional field overrides.
   User copyWith({
     String? id,
     String? email,
@@ -77,23 +89,19 @@ class User {
     );
   }
 
-  /// Returns initials for avatar display.
-  String get initials {
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return name.isNotEmpty ? name[0].toUpperCase() : '?';
-  }
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is User && runtimeType == other.runtimeType && id == other.id;
+      other is User &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          email == other.email &&
+          name == other.name &&
+          role == other.role;
 
   @override
-  int get hashCode => id.hashCode;
+  int get hashCode => Object.hash(id, email, name, role);
 
   @override
-  String toString() => 'User(id: $id, email: $email, role: $role)';
+  String toString() => 'User(id: $id, email: $email, name: $name, role: $role)';
 }
