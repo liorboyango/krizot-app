@@ -1,155 +1,129 @@
-/// Centralised error-handling utilities for Krizot.
-///
-/// Converts [DioException] and generic [Exception] objects into
-/// human-readable messages suitable for display in the UI.
+/// Global error handling utilities for the Krizot app.
 library;
 
-import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import '../models/api_response.dart';
 
-/// Severity level of an application error.
-enum ErrorSeverity { info, warning, error }
-
-/// A structured application error with a user-facing message.
-class AppError {
-  const AppError({
-    required this.message,
-    this.severity = ErrorSeverity.error,
-    this.statusCode,
-    this.raw,
-  });
-
-  /// Human-readable message to display in the UI.
-  final String message;
-
-  /// Severity level.
-  final ErrorSeverity severity;
-
-  /// HTTP status code (if applicable).
-  final int? statusCode;
-
-  /// Original exception for logging.
-  final Object? raw;
-
-  @override
-  String toString() => 'AppError($statusCode): $message';
-}
-
-/// Converts any exception into an [AppError].
+/// Centralised error handling for API and network errors.
 class ErrorHandler {
   ErrorHandler._();
 
-  /// Parses [exception] and returns a structured [AppError].
-  static AppError handle(Object exception) {
-    if (exception is DioException) {
-      return _handleDio(exception);
+  /// Convert any exception to a user-friendly message string.
+  static String getMessage(Object error) {
+    if (error is ApiException) return _getApiExceptionMessage(error);
+    if (error is NetworkException) return error.message;
+    return 'An unexpected error occurred. Please try again.';
+  }
+
+  static String _getApiExceptionMessage(ApiException e) {
+    if (e.isUnauthorized) return 'Your session has expired. Please log in again.';
+    if (e.isForbidden) return 'You do not have permission to perform this action.';
+    if (e.isNotFound) return 'The requested resource was not found.';
+    if (e.isConflict) {
+      return e.userMessage.isNotEmpty
+          ? e.userMessage
+          : 'A conflict was detected. Please check for overlapping schedules.';
     }
-    return AppError(
-      message: 'An unexpected error occurred. Please try again.',
-      raw: exception,
+    if (e.isValidationError) {
+      final details = e.error.details;
+      if (details != null && details.isNotEmpty) {
+        final messages = details
+            .map((d) => d['message'] as String? ?? '')
+            .where((m) => m.isNotEmpty)
+            .join(', ');
+        if (messages.isNotEmpty) return messages;
+      }
+      return e.userMessage;
+    }
+    if (e.isRateLimited) return 'Too many requests. Please wait a moment and try again.';
+    return e.userMessage.isNotEmpty ? e.userMessage : 'An unexpected server error occurred.';
+  }
+
+  /// Show an error SnackBar using the nearest [ScaffoldMessenger].
+  static void showSnackbar(
+    BuildContext context,
+    Object error, {
+    Duration duration = const Duration(seconds: 4),
+    SnackBarAction? action,
+  }) {
+    final message = getMessage(error);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message, style: const TextStyle(color: Colors.white))),
+          ],
+        ),
+        backgroundColor: const Color(0xFFE53E3E),
+        duration: duration,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        action: action,
+      ),
     );
   }
 
-  static AppError _handleDio(DioException e) {
-    switch (e.type) {
-      case DioExceptionType.connectionTimeout:
-      case DioExceptionType.sendTimeout:
-      case DioExceptionType.receiveTimeout:
-        return const AppError(
-          message: 'Connection timed out. Check your network and try again.',
-          severity: ErrorSeverity.warning,
-        );
-
-      case DioExceptionType.connectionError:
-        return const AppError(
-          message: 'Unable to reach the server. Check your connection.',
-          severity: ErrorSeverity.warning,
-        );
-
-      case DioExceptionType.badResponse:
-        return _handleHttpStatus(e);
-
-      case DioExceptionType.cancel:
-        return const AppError(
-          message: 'Request was cancelled.',
-          severity: ErrorSeverity.info,
-        );
-
-      default:
-        return AppError(
-          message: 'Network error: ${e.message ?? "Unknown"}',
-          raw: e,
-        );
-    }
+  /// Show a success SnackBar.
+  static void showSuccess(
+    BuildContext context,
+    String message, {
+    Duration duration = const Duration(seconds: 3),
+  }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message, style: const TextStyle(color: Colors.white))),
+          ],
+        ),
+        backgroundColor: const Color(0xFF00B087),
+        duration: duration,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
   }
 
-  static AppError _handleHttpStatus(DioException e) {
-    final statusCode = e.response?.statusCode;
-    final data = e.response?.data;
-
-    // Try to extract a server-provided message.
-    String? serverMessage;
-    if (data is Map<String, dynamic>) {
-      serverMessage = data['message'] as String? ??
-          data['error'] as String?;
-    }
-
-    switch (statusCode) {
-      case 400:
-        return AppError(
-          message: serverMessage ?? 'Invalid request. Please check your input.',
-          statusCode: 400,
-          raw: e,
-        );
-      case 401:
-        return AppError(
-          message: serverMessage ?? 'Session expired. Please sign in again.',
-          statusCode: 401,
-          raw: e,
-        );
-      case 403:
-        return AppError(
-          message: serverMessage ?? 'You do not have permission to do that.',
-          statusCode: 403,
-          raw: e,
-        );
-      case 404:
-        return AppError(
-          message: serverMessage ?? 'The requested resource was not found.',
-          statusCode: 404,
-          raw: e,
-        );
-      case 409:
-        return AppError(
-          message: serverMessage ?? 'Conflict: this record already exists.',
-          statusCode: 409,
-          raw: e,
-        );
-      case 422:
-        return AppError(
-          message: serverMessage ?? 'Validation failed. Please check your input.',
-          statusCode: 422,
-          raw: e,
-        );
-      case 429:
-        return const AppError(
-          message: 'Too many requests. Please wait a moment and try again.',
-          statusCode: 429,
-          severity: ErrorSeverity.warning,
-        );
-      case 500:
-      case 502:
-      case 503:
-        return AppError(
-          message: serverMessage ?? 'Server error. Please try again later.',
-          statusCode: statusCode,
-          raw: e,
-        );
-      default:
-        return AppError(
-          message: serverMessage ?? 'Unexpected error (HTTP $statusCode).',
-          statusCode: statusCode,
-          raw: e,
-        );
-    }
+  /// Show an error AlertDialog.
+  static Future<void> showErrorDialog(
+    BuildContext context,
+    Object error, {
+    String title = 'Error',
+    VoidCallback? onRetry,
+  }) async {
+    final message = getMessage(error);
+    await showAdaptiveDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          if (onRetry != null)
+            TextButton(
+              onPressed: () { Navigator.of(ctx).pop(); onRetry(); },
+              child: const Text('Retry'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
+
+  /// Returns true if the error is a schedule conflict (409).
+  static bool isScheduleConflict(Object error) =>
+      error is ApiException && error.isConflict;
+
+  /// Returns true if the error is an authentication error (401).
+  static bool isAuthError(Object error) =>
+      error is ApiException && error.isUnauthorized;
+
+  /// Returns true if the error is a network connectivity error.
+  static bool isNetworkError(Object error) => error is NetworkException;
 }
