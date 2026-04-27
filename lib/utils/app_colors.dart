@@ -1,39 +1,98 @@
+/// Krizot design system colour palette.
+///
+/// All colours are defined as static constants for compile-time safety.
+/// Usage: `color: AppColors.primary`
+library;
+
 import 'package:flutter/material.dart';
 
-/// Krizot application color system
-/// Military-grade clarity meets modern admin UX
+/// Central colour definitions for the Krizot app.
 class AppColors {
   AppColors._();
 
+  // ---------------------------------------------------------------------------
   // Primary Brand
-  static const primary = Color(0xFF1A2B4A); // Deep Navy
-  static const primaryLight = Color(0xFF2C4270); // Navy Light
-  static const accent = Color(0xFF0D7CFF); // Electric Blue
-  static const accentHover = Color(0xFF0057CC); // Blue Hover
+  // ---------------------------------------------------------------------------
 
+  /// Deep Navy — primary brand colour, used for sidebar and headers.
+  static const Color primary = Color(0xFF1A2B4A);
+
+  /// Navy Light — used for hover states in the sidebar.
+  static const Color primaryLight = Color(0xFF2C4270);
+
+  /// Electric Blue — accent / CTA colour.
+  static const Color accent = Color(0xFF0D7CFF);
+
+  /// Blue Hover — darker accent for hover/pressed states.
+  static const Color accentHover = Color(0xFF0057CC);
+
+  // ---------------------------------------------------------------------------
   // Status
-  static const success = Color(0xFF00B087); // Teal Green
-  static const warning = Color(0xFFFFB020); // Amber
-  static const danger = Color(0xFFE53E3E); // Red
-  static const info = Color(0xFF3182CE); // Info Blue
+  // ---------------------------------------------------------------------------
 
+  /// Teal Green — success / covered shift.
+  static const Color success = Color(0xFF00B087);
+
+  /// Amber — warning / open shift.
+  static const Color warning = Color(0xFFFFB020);
+
+  /// Red — danger / critical shift.
+  static const Color danger = Color(0xFFE53E3E);
+
+  /// Info Blue — informational elements.
+  static const Color info = Color(0xFF3182CE);
+
+  // ---------------------------------------------------------------------------
   // Neutrals
-  static const background = Color(0xFFF4F6FA); // Cool Gray BG
-  static const surface = Color(0xFFFFFFFF); // White Cards
-  static const border = Color(0xFFE2E8F0); // Dividers
-  static const textPrimary = Color(0xFF1A202C); // Almost Black
-  static const textSecondary = Color(0xFF718096); // Muted Gray
-  static const textMuted = Color(0xFFA0AEC0); // Light Gray
+  // ---------------------------------------------------------------------------
 
+  /// Cool Gray — page background.
+  static const Color background = Color(0xFFF4F6FA);
+
+  /// White — card / surface background.
+  static const Color surface = Color(0xFFFFFFFF);
+
+  /// Divider / border colour.
+  static const Color border = Color(0xFFE2E8F0);
+
+  /// Almost Black — primary text.
+  static const Color textPrimary = Color(0xFF1A202C);
+
+  /// Muted Gray — secondary text.
+  static const Color textSecondary = Color(0xFF718096);
+
+  /// Light Gray — placeholder / muted text.
+  static const Color textMuted = Color(0xFFA0AEC0);
+
+  // ---------------------------------------------------------------------------
   // Shift Status Chips
-  static const shiftCovered = Color(0xFFE6F9F5); // Green tint
-  static const shiftOpen = Color(0xFFFFF3CD); // Yellow tint
-  static const shiftCritical = Color(0xFFFFE5E5); // Red tint
+  // ---------------------------------------------------------------------------
 
-  // Sidebar
-  static const sidebarBg = primary;
-  static const sidebarText = Color(0xFFFFFFFF);
-  static const sidebarTextMuted = Color(0xB3FFFFFF); // white 70%
-  static const sidebarSelected = accent;
-  static const sidebarHover = primaryLight;
+  /// Green tint background for covered shifts.
+  static const Color shiftCovered = Color(0xFFE6F9F5);
+
+  /// Green text for covered shifts.
+  static const Color shiftCoveredText = Color(0xFF00875A);
+
+  /// Yellow tint background for open shifts.
+  static const Color shiftOpen = Color(0xFFFFF3CD);
+
+  /// Amber text for open shifts.
+  static const Color shiftOpenText = Color(0xFF92600A);
+
+  /// Red tint background for critical shifts.
+  static const Color shiftCritical = Color(0xFFFFE5E5);
+
+  /// Red text for critical shifts.
+  static const Color shiftCriticalText = Color(0xFFB91C1C);
+
+  // ---------------------------------------------------------------------------
+  // Table
+  // ---------------------------------------------------------------------------
+
+  /// Alternating row background (even rows).
+  static const Color tableRowAlt = Color(0xFFF8FAFC);
+
+  /// Row hover background.
+  static const Color tableRowHover = Color(0xFFEBF4FF);
 }
