@@ -1,224 +1,174 @@
+/// Riverpod providers for station state management.
+library;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/station.dart';
-import '../services/stations_service.dart';
+import '../models/api_response.dart';
+import '../services/station_service.dart';
 
-/// State for the stations list screen.
-class StationsState {
-  final List<Station> stations;
-  final PaginationMeta? pagination;
-  final StationStats? stats;
-  final bool isLoading;
-  final bool isLoadingMore;
-  final String? error;
-  final String searchQuery;
-  final String? statusFilter;
-  final int currentPage;
+// Service provider
+final stationServiceProvider = Provider<StationService>((ref) {
+  return StationService();
+});
 
-  const StationsState({
+/// Holds the current list query parameters and data.
+class StationListState {
+  const StationListState({
+    this.params = const StationListParams(),
     this.stations = const [],
     this.pagination,
-    this.stats,
     this.isLoading = false,
-    this.isLoadingMore = false,
     this.error,
-    this.searchQuery = '',
-    this.statusFilter,
-    this.currentPage = 1,
   });
 
-  bool get hasMore =>
-      pagination != null && currentPage < pagination!.totalPages;
+  final StationListParams params;
+  final List<Station> stations;
+  final Pagination? pagination;
+  final bool isLoading;
+  final String? error;
 
-  StationsState copyWith({
+  StationListState copyWith({
+    StationListParams? params,
     List<Station>? stations,
-    PaginationMeta? pagination,
-    StationStats? stats,
+    Pagination? pagination,
     bool? isLoading,
-    bool? isLoadingMore,
     String? error,
-    String? searchQuery,
-    String? statusFilter,
-    int? currentPage,
-    bool clearError = false,
-    bool clearStatusFilter = false,
   }) {
-    return StationsState(
+    return StationListState(
+      params: params ?? this.params,
       stations: stations ?? this.stations,
       pagination: pagination ?? this.pagination,
-      stats: stats ?? this.stats,
       isLoading: isLoading ?? this.isLoading,
-      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
-      error: clearError ? null : (error ?? this.error),
-      searchQuery: searchQuery ?? this.searchQuery,
-      statusFilter:
-          clearStatusFilter ? null : (statusFilter ?? this.statusFilter),
-      currentPage: currentPage ?? this.currentPage,
+      error: error,
     );
   }
 }
 
-/// Riverpod notifier for station management.
-class StationsNotifier extends StateNotifier<StationsState> {
-  final StationsService _service;
+/// Manages the station list with CRUD operations.
+class StationsNotifier extends AsyncNotifier<StationListState> {
+  late StationService _service;
 
-  StationsNotifier(this._service) : super(const StationsState());
+  @override
+  Future<StationListState> build() async {
+    _service = ref.read(stationServiceProvider);
+    return _fetchStations(const StationListParams());
+  }
 
-  /// Load the first page of stations.
-  Future<void> loadStations({bool refresh = false}) async {
-    if (state.isLoading && !refresh) return;
-
-    state = state.copyWith(
-      isLoading: true,
-      clearError: true,
-      currentPage: 1,
-    );
-
+  Future<StationListState> _fetchStations(StationListParams params) async {
     try {
-      final result = await _service.getStations(
-        search: state.searchQuery.isEmpty ? null : state.searchQuery,
-        status: state.statusFilter,
-        page: 1,
-      );
-      state = state.copyWith(
-        stations: result.stations,
+      final result = await _service.getStations(params);
+      return StationListState(
+        params: params,
+        stations: result.data,
         pagination: result.pagination,
         isLoading: false,
-        currentPage: 1,
       );
-    } on StationServiceException catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.message,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Failed to load stations',
-      );
+    } on ApiException catch (e) {
+      return StationListState(params: params, error: e.userMessage);
+    } on NetworkException catch (e) {
+      return StationListState(params: params, error: e.message);
     }
   }
 
-  /// Load station statistics.
-  Future<void> loadStats() async {
-    try {
-      final stats = await _service.getStats();
-      state = state.copyWith(stats: stats);
-    } catch (_) {
-      // Stats are non-critical; silently fail
-    }
+  /// Reload the station list with the current parameters.
+  Future<void> refresh() async {
+    final currentParams = state.valueOrNull?.params ?? const StationListParams();
+    state = const AsyncValue.loading();
+    state = AsyncValue.data(await _fetchStations(currentParams));
   }
 
-  /// Load the next page (pagination).
-  Future<void> loadMore() async {
-    if (!state.hasMore || state.isLoadingMore) return;
-
-    state = state.copyWith(isLoadingMore: true);
-    final nextPage = state.currentPage + 1;
-
-    try {
-      final result = await _service.getStations(
-        search: state.searchQuery.isEmpty ? null : state.searchQuery,
-        status: state.statusFilter,
-        page: nextPage,
-      );
-      state = state.copyWith(
-        stations: [...state.stations, ...result.stations],
-        pagination: result.pagination,
-        isLoadingMore: false,
-        currentPage: nextPage,
-      );
-    } on StationServiceException catch (e) {
-      state = state.copyWith(
-        isLoadingMore: false,
-        error: e.message,
-      );
-    } catch (_) {
-      state = state.copyWith(isLoadingMore: false);
-    }
-  }
-
-  /// Update search query and reload.
+  /// Update the search query and reload.
   Future<void> search(String query) async {
-    state = state.copyWith(searchQuery: query);
-    await loadStations(refresh: true);
+    final currentParams = state.valueOrNull?.params ?? const StationListParams();
+    final newParams = StationListParams(
+      page: 1,
+      limit: currentParams.limit,
+      search: query.isEmpty ? null : query,
+      status: currentParams.status,
+      sortBy: currentParams.sortBy,
+      sortOrder: currentParams.sortOrder,
+    );
+    state = const AsyncValue.loading();
+    state = AsyncValue.data(await _fetchStations(newParams));
   }
 
-  /// Set status filter and reload.
-  Future<void> filterByStatus(String? status) async {
-    if (status == null) {
-      state = state.copyWith(clearStatusFilter: true);
-    } else {
-      state = state.copyWith(statusFilter: status);
-    }
-    await loadStations(refresh: true);
+  /// Filter by status and reload.
+  Future<void> filterByStatus(StationStatus? status) async {
+    final currentParams = state.valueOrNull?.params ?? const StationListParams();
+    final newParams = StationListParams(
+      page: 1,
+      limit: currentParams.limit,
+      search: currentParams.search,
+      status: status,
+      sortBy: currentParams.sortBy,
+      sortOrder: currentParams.sortOrder,
+    );
+    state = const AsyncValue.loading();
+    state = AsyncValue.data(await _fetchStations(newParams));
+  }
+
+  /// Navigate to a specific page.
+  Future<void> goToPage(int page) async {
+    final currentParams = state.valueOrNull?.params ?? const StationListParams();
+    final newParams = StationListParams(
+      page: page,
+      limit: currentParams.limit,
+      search: currentParams.search,
+      status: currentParams.status,
+      sortBy: currentParams.sortBy,
+      sortOrder: currentParams.sortOrder,
+    );
+    state = const AsyncValue.loading();
+    state = AsyncValue.data(await _fetchStations(newParams));
   }
 
   /// Create a new station and refresh the list.
-  Future<Station?> createStation(CreateStationRequest request) async {
-    try {
-      final station = await _service.createStation(request);
-      await loadStations(refresh: true);
-      await loadStats();
-      return station;
-    } on StationServiceException catch (e) {
-      state = state.copyWith(error: e.message);
-      return null;
-    } catch (_) {
-      state = state.copyWith(error: 'Failed to create station');
-      return null;
-    }
+  Future<Station> createStation(CreateStationRequest request) async {
+    final station = await _service.createStation(request);
+    await refresh();
+    return station;
   }
 
-  /// Update an existing station and refresh.
-  Future<Station?> updateStation(
-      String id, UpdateStationRequest request) async {
-    try {
-      final station = await _service.updateStation(id, request);
-      // Update in-place for instant UI feedback
-      final updated = state.stations
-          .map((s) => s.id == id ? station : s)
-          .toList();
-      state = state.copyWith(stations: updated);
-      await loadStats();
-      return station;
-    } on StationServiceException catch (e) {
-      state = state.copyWith(error: e.message);
-      return null;
-    } catch (_) {
-      state = state.copyWith(error: 'Failed to update station');
-      return null;
+  /// Update an existing station and refresh the list.
+  Future<Station> updateStation(String id, UpdateStationRequest request) async {
+    final station = await _service.updateStation(id, request);
+    final current = state.valueOrNull;
+    if (current != null) {
+      final updatedList = current.stations.map((s) => s.id == id ? station : s).toList();
+      state = AsyncValue.data(current.copyWith(stations: updatedList));
     }
+    return station;
   }
 
-  /// Delete a station and refresh.
-  Future<bool> deleteStation(String id, {bool force = false}) async {
-    try {
-      await _service.deleteStation(id, force: force);
-      final updated = state.stations.where((s) => s.id != id).toList();
-      state = state.copyWith(stations: updated);
-      await loadStats();
-      return true;
-    } on StationServiceException catch (e) {
-      state = state.copyWith(error: e.message);
-      return false;
-    } catch (_) {
-      state = state.copyWith(error: 'Failed to delete station');
-      return false;
+  /// Delete a station and refresh the list.
+  Future<void> deleteStation(String id, {bool force = false}) async {
+    await _service.deleteStation(id, force: force);
+    final current = state.valueOrNull;
+    if (current != null) {
+      final updatedList = current.stations.where((s) => s.id != id).toList();
+      state = AsyncValue.data(current.copyWith(stations: updatedList));
     }
-  }
-
-  /// Clear error message.
-  void clearError() {
-    state = state.copyWith(clearError: true);
   }
 }
 
-/// Provider for [StationsService].
-final stationsServiceProvider =
-    Provider<StationsService>((ref) => StationsService());
+/// Provider for the [StationsNotifier].
+final stationsNotifierProvider =
+    AsyncNotifierProvider<StationsNotifier, StationListState>(StationsNotifier.new);
 
-/// Provider for [StationsNotifier] and [StationsState].
-final stationsProvider =
-    StateNotifierProvider<StationsNotifier, StationsState>((ref) {
-  return StationsNotifier(ref.watch(stationsServiceProvider));
+/// Convenience provider for the station list.
+final stationsProvider = Provider<List<Station>>((ref) {
+  return ref.watch(stationsNotifierProvider).valueOrNull?.stations ?? [];
+});
+
+/// Provider for station aggregate stats.
+final stationStatsProvider = FutureProvider<StationStats>((ref) async {
+  final service = ref.read(stationServiceProvider);
+  return service.getStats();
+});
+
+/// Provider for a single station by ID.
+final stationDetailProvider = FutureProvider.family<Station, String>((ref, id) async {
+  final service = ref.read(stationServiceProvider);
+  return service.getStation(id);
 });
