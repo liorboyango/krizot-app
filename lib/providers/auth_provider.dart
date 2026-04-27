@@ -1,103 +1,230 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/user.dart';
-import '../services/auth_service.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../utils/constants.dart';
 
-/// Auth state for the application.
+// ---------------------------------------------------------------------------
+// Secure storage provider
+// ---------------------------------------------------------------------------
+final secureStorageProvider = Provider<FlutterSecureStorage>(
+  (ref) => const FlutterSecureStorage(),
+);
+
+// ---------------------------------------------------------------------------
+// Auth state
+// ---------------------------------------------------------------------------
 class AuthState {
-  final User? user;
+  final String? accessToken;
+  final String? refreshToken;
+  final Map<String, dynamic>? user;
+  final bool isAuthenticated;
   final bool isLoading;
   final String? error;
-  final bool isInitialized;
 
   const AuthState({
+    this.accessToken,
+    this.refreshToken,
     this.user,
+    this.isAuthenticated = false,
     this.isLoading = false,
     this.error,
-    this.isInitialized = false,
   });
 
-  bool get isAuthenticated => user != null;
-
   AuthState copyWith({
-    User? user,
+    String? accessToken,
+    String? refreshToken,
+    Map<String, dynamic>? user,
+    bool? isAuthenticated,
     bool? isLoading,
     String? error,
-    bool? isInitialized,
-    bool clearUser = false,
-    bool clearError = false,
   }) {
     return AuthState(
-      user: clearUser ? null : (user ?? this.user),
+      accessToken: accessToken ?? this.accessToken,
+      refreshToken: refreshToken ?? this.refreshToken,
+      user: user ?? this.user,
+      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
       isLoading: isLoading ?? this.isLoading,
-      error: clearError ? null : (error ?? this.error),
-      isInitialized: isInitialized ?? this.isInitialized,
+      error: error,
     );
   }
 }
 
-/// Riverpod notifier for authentication state.
+// ---------------------------------------------------------------------------
+// Auth notifier
+// ---------------------------------------------------------------------------
 class AuthNotifier extends StateNotifier<AuthState> {
-  final AuthService _authService;
+  final FlutterSecureStorage _storage;
+  final Dio _dio;
 
-  AuthNotifier(this._authService) : super(const AuthState()) {
-    _initialize();
+  AuthNotifier(this._storage, this._dio) : super(const AuthState()) {
+    _loadStoredAuth();
   }
 
-  /// Restore session from secure storage on app start.
-  Future<void> _initialize() async {
+  Future<void> _loadStoredAuth() async {
     state = state.copyWith(isLoading: true);
     try {
-      final user = await _authService.restoreSession();
-      state = AuthState(
-        user: user,
-        isInitialized: true,
-      );
+      final token = await _storage.read(key: AppConstants.tokenKey);
+      final refreshToken =
+          await _storage.read(key: AppConstants.refreshTokenKey);
+      if (token != null) {
+        state = state.copyWith(
+          accessToken: token,
+          refreshToken: refreshToken,
+          isAuthenticated: true,
+          isLoading: false,
+        );
+        // Attach token to dio
+        _dio.options.headers['Authorization'] = 'Bearer $token';
+      } else {
+        state = state.copyWith(isLoading: false);
+      }
     } catch (_) {
-      state = const AuthState(isInitialized: true);
+      state = state.copyWith(isLoading: false);
     }
   }
 
-  /// Login with email and password.
-  Future<bool> login(String email, String password) async {
-    state = state.copyWith(isLoading: true, clearError: true);
+  Future<void> login(String email, String password) async {
+    state = state.copyWith(isLoading: true, error: null);
     try {
-      final user = await _authService.login(email, password);
-      state = AuthState(user: user, isInitialized: true);
-      return true;
-    } on AuthException catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.message,
-        clearUser: false,
+      final response = await _dio.post(
+        '${AppConstants.apiBaseUrl}/auth/login',
+        data: {'email': email, 'password': password},
       );
-      return false;
+      final data = response.data as Map<String, dynamic>;
+      if (data['success'] == true) {
+        final responseData = data['data'] as Map<String, dynamic>;
+        final token = responseData['token'] as String? ??
+            responseData['accessToken'] as String?;
+        final refreshToken = responseData['refreshToken'] as String?;
+        final user = responseData['user'] as Map<String, dynamic>?;
+
+        if (token != null) {
+          await _storage.write(key: AppConstants.tokenKey, value: token);
+          if (refreshToken != null) {
+            await _storage.write(
+                key: AppConstants.refreshTokenKey, value: refreshToken);
+          }
+          _dio.options.headers['Authorization'] = 'Bearer $token';
+          state = state.copyWith(
+            accessToken: token,
+            refreshToken: refreshToken,
+            user: user,
+            isAuthenticated: true,
+            isLoading: false,
+          );
+        } else {
+          state = state.copyWith(
+            isLoading: false,
+            error: 'Invalid response from server',
+          );
+        }
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          error: data['error']?['message'] ?? 'Login failed',
+        );
+      }
+    } on DioException catch (e) {
+      final message = e.response?.data?['error']?['message'] ??
+          e.response?.data?['message'] ??
+          'Network error. Please try again.';
+      state = state.copyWith(isLoading: false, error: message as String);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         error: 'An unexpected error occurred',
       );
-      return false;
     }
   }
 
-  /// Logout and clear session.
   Future<void> logout() async {
-    state = state.copyWith(isLoading: true);
-    await _authService.logout();
-    state = const AuthState(isInitialized: true);
+    try {
+      await _dio.post('${AppConstants.apiBaseUrl}/auth/logout');
+    } catch (_) {
+      // Ignore logout API errors
+    }
+    await _storage.delete(key: AppConstants.tokenKey);
+    await _storage.delete(key: AppConstants.refreshTokenKey);
+    _dio.options.headers.remove('Authorization');
+    state = const AuthState();
   }
 
-  /// Clear any error message.
-  void clearError() {
-    state = state.copyWith(clearError: true);
+  Future<bool> refreshToken() async {
+    final refreshToken = state.refreshToken;
+    if (refreshToken == null) return false;
+    try {
+      final response = await _dio.post(
+        '${AppConstants.apiBaseUrl}/auth/refresh',
+        data: {'refreshToken': refreshToken},
+      );
+      final data = response.data as Map<String, dynamic>;
+      if (data['success'] == true) {
+        final newToken = data['data']?['token'] as String?;
+        if (newToken != null) {
+          await _storage.write(key: AppConstants.tokenKey, value: newToken);
+          _dio.options.headers['Authorization'] = 'Bearer $newToken';
+          state = state.copyWith(accessToken: newToken);
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
   }
 }
 
-/// Provider for [AuthService].
-final authServiceProvider = Provider<AuthService>((ref) => AuthService());
+// ---------------------------------------------------------------------------
+// Dio provider (singleton with auth interceptor)
+// ---------------------------------------------------------------------------
+final dioProvider = Provider<Dio>((ref) {
+  final dio = Dio(
+    BaseOptions(
+      baseUrl: AppConstants.apiBaseUrl,
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 30),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    ),
+  );
 
-/// Provider for [AuthNotifier] and [AuthState].
-final authProvider =
-    StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.watch(authServiceProvider));
+  // Add logging interceptor in debug mode
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onError: (error, handler) async {
+        if (error.response?.statusCode == 401) {
+          // Try to refresh token
+          final authNotifier = ref.read(authProvider.notifier);
+          final refreshed = await authNotifier.refreshToken();
+          if (refreshed) {
+            // Retry the request
+            final opts = error.requestOptions;
+            final token = ref.read(authProvider).accessToken;
+            opts.headers['Authorization'] = 'Bearer $token';
+            try {
+              final response = await dio.fetch(opts);
+              return handler.resolve(response);
+            } catch (e) {
+              return handler.next(error);
+            }
+          } else {
+            // Logout on auth failure
+            ref.read(authProvider.notifier).logout();
+          }
+        }
+        return handler.next(error);
+      },
+    ),
+  );
+
+  return dio;
+});
+
+// ---------------------------------------------------------------------------
+// Auth provider
+// ---------------------------------------------------------------------------
+final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+  final storage = ref.watch(secureStorageProvider);
+  final dio = ref.watch(dioProvider);
+  return AuthNotifier(storage, dio);
 });
