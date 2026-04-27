@@ -1,123 +1,170 @@
-import 'dart:convert';
+/// Authentication service for the Krizot API.
+///
+/// Handles:
+/// - Login (POST /api/auth/login)
+/// - Logout (POST /api/auth/logout)
+/// - Token refresh (POST /api/auth/refresh)
+/// - Current user (GET /api/auth/me)
+/// - Registration (POST /api/auth/register) — admin only
+library;
+
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import '../models/user.dart';
-import '../utils/constants.dart';
+import '../models/api_response.dart';
 import 'api_client.dart';
 
-/// Authentication service for login, logout, and token management.
+/// Credentials used for login.
+class LoginCredentials {
+  const LoginCredentials({
+    required this.email,
+    required this.password,
+  });
+
+  final String email;
+  final String password;
+
+  Map<String, dynamic> toJson() => {
+        'email': email,
+        'password': password,
+      };
+}
+
+/// Result of a successful login.
+class AuthResult {
+  const AuthResult({
+    required this.user,
+    required this.accessToken,
+    required this.refreshToken,
+  });
+
+  final User user;
+  final String accessToken;
+  final String refreshToken;
+}
+
+/// Service for authentication-related API calls.
 class AuthService {
+  AuthService({ApiClient? client})
+      : _client = client ?? ApiClient.instance;
+
   final ApiClient _client;
-  final FlutterSecureStorage _storage;
 
-  AuthService({
-    ApiClient? client,
-    FlutterSecureStorage? storage,
-  })  : _client = client ?? ApiClient.instance,
-        _storage = storage ?? const FlutterSecureStorage();
+  // ---------------------------------------------------------------------------
+  // Login
+  // ---------------------------------------------------------------------------
 
-  /// Login with email and password.
+  /// Authenticate with email and password.
   ///
-  /// Returns the authenticated [User] on success.
-  /// Throws [AuthException] on failure.
-  Future<User> login(String email, String password) async {
+  /// On success, tokens are persisted in secure storage automatically.
+  /// Throws [ApiException] or [NetworkException] on failure.
+  Future<AuthResult> login(LoginCredentials credentials) async {
     try {
       final response = await _client.post<Map<String, dynamic>>(
         '/auth/login',
-        data: {'email': email, 'password': password},
+        data: credentials.toJson(),
       );
 
       final body = response.data!;
-      if (body['success'] != true) {
-        throw AuthException(
-          body['error']?['message'] as String? ?? 'Login failed',
-        );
-      }
-
       final data = body['data'] as Map<String, dynamic>;
-      final user = User.fromJson(data['user'] as Map<String, dynamic>);
-      final accessToken = data['accessToken'] as String;
-      final refreshToken = data['refreshToken'] as String?;
 
-      // Persist tokens securely
-      await _storage.write(key: AppConstants.tokenKey, value: accessToken);
-      if (refreshToken != null) {
-        await _storage.write(
-            key: AppConstants.refreshTokenKey, value: refreshToken);
-      }
-      await _storage.write(
-          key: AppConstants.userKey, value: jsonEncode(user.toJson()));
+      // Support both token/accessToken field names
+      final accessToken = (data['token'] as String?) ??
+          (data['accessToken'] as String?) ??
+          '';
+      final refreshToken = (data['refreshToken'] as String?) ?? '';
+      final userJson = data['user'] as Map<String, dynamic>;
 
-      return user;
+      final user = User.fromJson(userJson);
+
+      await _client.saveTokens(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      );
+
+      return AuthResult(
+        user: user,
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      );
     } on DioException catch (e) {
-      final message = _extractErrorMessage(e);
-      throw AuthException(message);
+      throw ApiClient.parseError(e);
     }
   }
 
-  /// Logout: clear stored tokens.
+  // ---------------------------------------------------------------------------
+  // Logout
+  // ---------------------------------------------------------------------------
+
+  /// Invalidate the current session on the server and clear local tokens.
   Future<void> logout() async {
     try {
       await _client.post<dynamic>('/auth/logout');
-    } catch (_) {
-      // Best-effort logout
+    } on DioException catch (_) {
+      // Best-effort — always clear local tokens
     } finally {
-      await _storage.delete(key: AppConstants.tokenKey);
-      await _storage.delete(key: AppConstants.refreshTokenKey);
-      await _storage.delete(key: AppConstants.userKey);
+      await _client.clearTokens();
     }
   }
 
-  /// Restore session from secure storage.
+  // ---------------------------------------------------------------------------
+  // Current user
+  // ---------------------------------------------------------------------------
+
+  /// Fetch the currently authenticated user's profile.
   ///
-  /// Returns the stored [User] if a valid token exists, otherwise null.
-  Future<User?> restoreSession() async {
-    final token = await _storage.read(key: AppConstants.tokenKey);
-    final userJson = await _storage.read(key: AppConstants.userKey);
-    if (token == null || userJson == null) return null;
-
+  /// Throws [ApiException] or [NetworkException] on failure.
+  Future<User> getCurrentUser() async {
     try {
-      final user = User.fromJson(
-          jsonDecode(userJson) as Map<String, dynamic>);
-      return user;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// Get current user from /auth/me.
-  Future<User?> getCurrentUser() async {
-    try {
-      final response =
-          await _client.get<Map<String, dynamic>>('/auth/me');
+      final response = await _client.get<Map<String, dynamic>>('/auth/me');
       final body = response.data!;
-      if (body['success'] == true) {
-        return User.fromJson(body['data'] as Map<String, dynamic>);
-      }
-      return null;
-    } catch (_) {
-      return null;
+      final data = body['data'] as Map<String, dynamic>;
+      final userJson = data['user'] as Map<String, dynamic>? ?? data;
+      return User.fromJson(userJson);
+    } on DioException catch (e) {
+      throw ApiClient.parseError(e);
     }
   }
 
-  String _extractErrorMessage(DioException e) {
+  // ---------------------------------------------------------------------------
+  // Registration (admin only)
+  // ---------------------------------------------------------------------------
+
+  /// Register a new user. Requires admin role.
+  ///
+  /// Throws [ApiException] or [NetworkException] on failure.
+  Future<User> register({
+    required String email,
+    required String password,
+    required String name,
+    required UserRole role,
+  }) async {
     try {
-      final data = e.response?.data;
-      if (data is Map<String, dynamic>) {
-        return data['error']?['message'] as String? ??
-            data['message'] as String? ??
-            'Authentication failed';
-      }
-    } catch (_) {}
-    return e.message ?? 'Authentication failed';
+      final response = await _client.post<Map<String, dynamic>>(
+        '/auth/register',
+        data: {
+          'email': email,
+          'password': password,
+          'name': name,
+          'role': role.toApiString(),
+        },
+      );
+      final body = response.data!;
+      final data = body['data'] as Map<String, dynamic>;
+      final userJson = data['user'] as Map<String, dynamic>? ?? data;
+      return User.fromJson(userJson);
+    } on DioException catch (e) {
+      throw ApiClient.parseError(e);
+    }
   }
-}
 
-/// Exception thrown by [AuthService] on authentication errors.
-class AuthException implements Exception {
-  final String message;
-  const AuthException(this.message);
+  // ---------------------------------------------------------------------------
+  // Token helpers
+  // ---------------------------------------------------------------------------
 
-  @override
-  String toString() => 'AuthException: $message';
+  /// Returns true if there is a stored access token (user may be logged in).
+  Future<bool> hasStoredToken() async {
+    final token = await _client.getAccessToken();
+    return token != null && token.isNotEmpty;
+  }
 }
