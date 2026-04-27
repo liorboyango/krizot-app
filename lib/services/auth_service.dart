@@ -1,121 +1,102 @@
-/// Authentication service for Krizot.
-///
-/// Handles login, logout, and token persistence via [FlutterSecureStorage].
-library;
-
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
+import 'package:dio/dio.dart';
 import '../models/user_model.dart';
-import '../utils/constants.dart';
-import '../utils/error_handler.dart';
 import 'api_client.dart';
 
-/// Result of a login attempt.
-class AuthResult {
-  const AuthResult({
-    required this.user,
-    required this.token,
-    this.refreshToken,
-  });
-
-  final UserModel user;
-  final String token;
-  final String? refreshToken;
-}
-
-/// Service responsible for authentication operations.
+/// Authentication service for login/logout/session management.
 class AuthService {
-  AuthService({
-    ApiClient? apiClient,
-    FlutterSecureStorage? storage,
-  })  : _api = apiClient ?? ApiClient.instance,
-        _storage = storage ?? const FlutterSecureStorage();
+  final ApiClient _client;
 
-  final ApiClient _api;
-  final FlutterSecureStorage _storage;
+  AuthService({ApiClient? client}) : _client = client ?? ApiClient.instance;
 
-  // ---------------------------------------------------------------------------
-  // Login
-  // ---------------------------------------------------------------------------
-
-  /// Authenticates the user with [email] and [password].
-  ///
-  /// On success, persists the JWT and returns an [AuthResult].
-  /// On failure, throws an [AppError].
-  Future<AuthResult> login({
+  /// Logs in with email and password.
+  /// Returns the authenticated [UserModel] on success.
+  /// Throws [AuthException] on failure.
+  Future<UserModel> login({
     required String email,
     required String password,
   }) async {
-    final data = await _api.post(
-      '/auth/login',
-      data: {'email': email.trim(), 'password': password},
-    );
-
-    if (data is! Map<String, dynamic>) {
-      throw const AppError(message: 'Unexpected response from server.');
-    }
-
-    final token = data['token'] as String? ?? data['accessToken'] as String?;
-    if (token == null || token.isEmpty) {
-      throw const AppError(message: 'No token received from server.');
-    }
-
-    final userJson = data['user'] as Map<String, dynamic>?;
-    if (userJson == null) {
-      throw const AppError(message: 'No user data received from server.');
-    }
-
-    final user = UserModel.fromJson(userJson);
-    final refreshToken = data['refreshToken'] as String?;
-
-    // Persist tokens and user.
-    await Future.wait([
-      _api.setToken(token),
-      _storage.write(key: AppConstants.userKey, value: user.toJsonString()),
-      if (refreshToken != null)
-        _storage.write(
-          key: AppConstants.refreshTokenKey,
-          value: refreshToken,
-        ),
-    ]);
-
-    return AuthResult(user: user, token: token, refreshToken: refreshToken);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Logout
-  // ---------------------------------------------------------------------------
-
-  /// Clears all stored credentials.
-  Future<void> logout() async {
-    await Future.wait([
-      _api.clearToken(),
-      _storage.delete(key: AppConstants.userKey),
-      _storage.delete(key: AppConstants.refreshTokenKey),
-    ]);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Session restoration
-  // ---------------------------------------------------------------------------
-
-  /// Attempts to restore a previous session from secure storage.
-  ///
-  /// Returns the cached [UserModel] if a valid token exists, otherwise `null`.
-  Future<UserModel?> restoreSession() async {
-    final token = await _storage.read(key: AppConstants.tokenKey);
-    final userJson = await _storage.read(key: AppConstants.userKey);
-
-    if (token == null || token.isEmpty || userJson == null) {
-      return null;
-    }
-
     try {
-      return UserModel.fromJsonString(userJson);
-    } catch (_) {
-      // Corrupted cache – clear it.
-      await logout();
-      return null;
+      final response = await _client.dio.post(
+        '/auth/login',
+        data: {'email': email.trim(), 'password': password},
+      );
+
+      final body = response.data as Map<String, dynamic>;
+      if (body['success'] != true) {
+        throw AuthException(
+          body['error']?['message']?.toString() ?? 'Login failed',
+        );
+      }
+
+      final data = body['data'] as Map<String, dynamic>;
+      final user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
+      final accessToken = data['accessToken']?.toString() ?? '';
+      final refreshToken = data['refreshToken']?.toString() ?? '';
+
+      await _client.saveTokens(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      );
+
+      return user;
+    } on DioException catch (e) {
+      final message = _extractErrorMessage(e);
+      throw AuthException(message);
     }
   }
+
+  /// Logs out and clears stored tokens.
+  Future<void> logout() async {
+    try {
+      await _client.dio.post('/auth/logout');
+    } catch (_) {
+      // Ignore logout API errors — always clear local tokens.
+    } finally {
+      await _client.clearTokens();
+    }
+  }
+
+  /// Checks if the user has a valid stored session.
+  Future<bool> hasSession() => _client.hasToken();
+
+  /// Fetches the current user profile from /auth/me.
+  Future<UserModel?> getCurrentUser() async {
+    try {
+      final response = await _client.dio.get('/auth/me');
+      final body = response.data as Map<String, dynamic>;
+      if (body['success'] == true) {
+        return UserModel.fromJson(body['data'] as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  String _extractErrorMessage(DioException e) {
+    try {
+      final data = e.response?.data;
+      if (data is Map<String, dynamic>) {
+        return data['error']?['message']?.toString() ??
+            data['message']?.toString() ??
+            'An error occurred';
+      }
+    } catch (_) {}
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.receiveTimeout:
+        return 'Connection timed out. Please try again.';
+      case DioExceptionType.connectionError:
+        return 'Unable to connect to server. Check your network.';
+      default:
+        return e.message ?? 'An unexpected error occurred';
+    }
+  }
+}
+
+/// Exception thrown by [AuthService] on authentication failures.
+class AuthException implements Exception {
+  final String message;
+  const AuthException(this.message);
+
+  @override
+  String toString() => 'AuthException: $message';
 }

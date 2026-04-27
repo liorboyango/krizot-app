@@ -1,42 +1,52 @@
-/// Root application widget for Krizot.
-///
-/// Configures:
-/// - Material 3 theme with custom [AppTheme]
-/// - [GoRouter]-based navigation
-/// - Global error / loading overlays
-library;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:go_router/go_router.dart';
 import 'utils/app_theme.dart';
-import 'router/app_router.dart';
+import 'providers/auth_provider.dart';
+import 'screens/login_screen.dart';
+import 'screens/dashboard_screen.dart';
 
-/// The root widget of the Krizot application.
-///
-/// Consumes [appRouterProvider] so that navigation reacts to auth state
-/// changes (e.g., redirect to login when JWT expires).
+/// Root application widget with theme and routing configuration.
 class KrizotApp extends ConsumerWidget {
   const KrizotApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final router = ref.watch(appRouterProvider);
-
+    final router = ref.watch(_routerProvider);
     return MaterialApp.router(
       title: 'Krizot',
       debugShowCheckedModeBanner: false,
-
-      // Theme
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light,
-
-      // Router
       routerConfig: router,
-
-      // Localisation
-      locale: const Locale('en'),
     );
   }
 }
+
+/// GoRouter provider with auth-based redirect logic.
+final _routerProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authStateProvider);
+
+  return GoRouter(
+    initialLocation: '/',
+    redirect: (context, state) {
+      final isLoggedIn = authState.valueOrNull?.isAuthenticated ?? false;
+      final isLoginRoute = state.matchedLocation == '/';
+
+      if (!isLoggedIn && !isLoginRoute) return '/';
+      if (isLoggedIn && isLoginRoute) return '/dashboard';
+      return null;
+    },
+    routes: [
+      GoRoute(
+        path: '/',
+        name: 'login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/dashboard',
+        name: 'dashboard',
+        builder: (context, state) => const DashboardScreen(),
+      ),
+    ],
+  );
+});

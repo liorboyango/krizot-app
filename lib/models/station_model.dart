@@ -1,8 +1,15 @@
-/// Data model for a Krizot station.
-library;
-
-/// Represents a physical station managed by the scheduler.
+/// Station data model matching backend API contract.
 class StationModel {
+  final String id;
+  final String name;
+  final String location;
+  final int capacity;
+  final String status;
+  final String? notes;
+  final int scheduleCount;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
   const StationModel({
     required this.id,
     required this.name,
@@ -10,41 +17,26 @@ class StationModel {
     required this.capacity,
     required this.status,
     this.notes,
+    this.scheduleCount = 0,
+    this.createdAt,
+    this.updatedAt,
   });
-
-  /// Unique station identifier (e.g. `ST-001`).
-  final String id;
-
-  /// Human-readable station name (e.g. `Alpha`).
-  final String name;
-
-  /// Physical location / sector (e.g. `North`).
-  final String location;
-
-  /// Maximum number of staff slots.
-  final int capacity;
-
-  /// Operational status.
-  final StationStatus status;
-
-  /// Optional free-text notes.
-  final String? notes;
-
-  /// Whether the station is currently operational.
-  bool get isActive => status == StationStatus.active;
-
-  // ---------------------------------------------------------------------------
-  // Serialisation
-  // ---------------------------------------------------------------------------
 
   factory StationModel.fromJson(Map<String, dynamic> json) {
     return StationModel(
       id: json['id']?.toString() ?? '',
-      name: json['name'] as String? ?? '',
-      location: json['location'] as String? ?? '',
-      capacity: (json['capacity'] as num?)?.toInt() ?? 1,
-      status: StationStatus.fromString(json['status'] as String? ?? 'active'),
-      notes: json['notes'] as String?,
+      name: json['name']?.toString() ?? '',
+      location: json['location']?.toString() ?? '',
+      capacity: (json['capacity'] as num?)?.toInt() ?? 0,
+      status: json['status']?.toString() ?? 'active',
+      notes: json['notes']?.toString(),
+      scheduleCount: (json['scheduleCount'] as num?)?.toInt() ?? 0,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString())
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'].toString())
+          : null,
     );
   }
 
@@ -53,17 +45,29 @@ class StationModel {
         'name': name,
         'location': location,
         'capacity': capacity,
-        'status': status.value,
+        'status': status,
         if (notes != null) 'notes': notes,
       };
+
+  bool get isActive => status.toLowerCase() == 'active';
+
+  /// Formatted station ID for display (e.g., ST-001).
+  String get displayId {
+    final numPart = id.replaceAll(RegExp(r'[^0-9]'), '');
+    if (numPart.isNotEmpty) {
+      return 'ST-${numPart.padLeft(3, '0')}';
+    }
+    return 'ST-${id.substring(0, 3).toUpperCase()}';
+  }
 
   StationModel copyWith({
     String? id,
     String? name,
     String? location,
     int? capacity,
-    StationStatus? status,
+    String? status,
     String? notes,
+    int? scheduleCount,
   }) {
     return StationModel(
       id: id ?? this.id,
@@ -72,39 +76,9 @@ class StationModel {
       capacity: capacity ?? this.capacity,
       status: status ?? this.status,
       notes: notes ?? this.notes,
-    );
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is StationModel &&
-          runtimeType == other.runtimeType &&
-          id == other.id;
-
-  @override
-  int get hashCode => id.hashCode;
-
-  @override
-  String toString() =>
-      'StationModel(id: $id, name: $name, location: $location, capacity: $capacity, status: ${status.value})';
-}
-
-/// Operational status of a station.
-enum StationStatus {
-  active('active'),
-  closed('closed');
-
-  const StationStatus(this.value);
-
-  /// API string value.
-  final String value;
-
-  /// Parses a string from the API into a [StationStatus].
-  static StationStatus fromString(String value) {
-    return StationStatus.values.firstWhere(
-      (s) => s.value == value.toLowerCase(),
-      orElse: () => StationStatus.active,
+      scheduleCount: scheduleCount ?? this.scheduleCount,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 }
