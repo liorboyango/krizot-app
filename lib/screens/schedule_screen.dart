@@ -14,7 +14,6 @@ import 'package:intl/intl.dart';
 
 import '../models/schedule.dart';
 import '../models/station.dart';
-import '../models/user.dart';
 import '../providers/schedules_provider.dart';
 import '../providers/stations_provider.dart';
 import '../services/schedule_service.dart';
@@ -469,7 +468,7 @@ class _NewShiftDialogState extends ConsumerState<_NewShiftDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           DropdownButtonFormField<String>(
-            value: _selectedStationId,
+            initialValue: _selectedStationId,
             decoration: const InputDecoration(labelText: 'Station *'),
             items: stations.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
             onChanged: (v) => setState(() => _selectedStationId = v),
@@ -520,12 +519,12 @@ class _NewShiftDialogState extends ConsumerState<_NewShiftDialog> {
                   endTime: _endTime,
                 ),
               );
-              if (mounted) {
+              if (context.mounted) {
                 Navigator.of(context).pop();
                 ErrorHandler.showSuccess(context, 'Shift created successfully');
               }
             } catch (e) {
-              if (mounted) {
+              if (context.mounted) {
                 setState(() => _saving = false);
                 ErrorHandler.showSnackbar(context, e);
               }

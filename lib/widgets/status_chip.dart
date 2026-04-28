@@ -21,13 +21,13 @@ class StatusChip extends StatelessWidget {
   factory StatusChip.fromStationStatus(StationStatus status) {
     switch (status) {
       case StationStatus.active:
-        return StatusChip(
+        return const StatusChip(
           label: 'Active',
           backgroundColor: AppColors.shiftCovered,
           textColor: AppColors.success,
         );
       case StationStatus.closed:
-        return StatusChip(
+        return const StatusChip(
           label: 'Closed',
           backgroundColor: AppColors.shiftCritical,
           textColor: AppColors.danger,

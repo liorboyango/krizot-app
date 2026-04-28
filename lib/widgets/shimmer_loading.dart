@@ -112,14 +112,14 @@ class TableShimmer extends StatelessWidget {
               bottom: BorderSide(color: AppColors.border),
             ),
           ),
-          child: Row(
+          child: const Row(
             children: [
               ShimmerBox(width: 60, height: 14, borderRadius: 4),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
               ShimmerBox(width: 100, height: 14, borderRadius: 4),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
               ShimmerBox(width: 80, height: 14, borderRadius: 4),
-              const Spacer(),
+              Spacer(),
               ShimmerBox(width: 70, height: 24, borderRadius: 12),
             ],
           ),

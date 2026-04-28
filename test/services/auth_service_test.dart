@@ -15,7 +15,6 @@ import 'package:krizot_app/services/auth_service.dart';
 void main() {
   late Dio dio;
   late DioAdapter dioAdapter;
-  late AuthService authService;
 
   const baseUrl = 'http://localhost:3000/api';
 
@@ -24,7 +23,6 @@ void main() {
     dioAdapter = DioAdapter(dio: dio);
     // Initialise the singleton with the mocked Dio
     ApiClient.instance.init();
-    authService = AuthService();
   });
 
   group('AuthService.login', () {

@@ -4,8 +4,6 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:krizot_app/models/schedule.dart';
-import 'package:krizot_app/models/station.dart';
-import 'package:krizot_app/models/user.dart';
 import 'package:krizot_app/services/schedule_service.dart';
 
 void main() {

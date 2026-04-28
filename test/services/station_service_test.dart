@@ -4,7 +4,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:krizot_app/models/station.dart';
-import 'package:krizot_app/models/api_response.dart';
+import 'package:krizot_app/services/station_service.dart';
 
 void main() {
   group('Station model', () {

@@ -91,9 +91,9 @@ class ShimmerRow extends StatelessWidget {
       child: Row(
         children: List.generate(
           columns,
-          (i) => Expanded(
+          (i) => const Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: EdgeInsets.symmetric(horizontal: 8),
               child: LoadingShimmer(
                 height: 16,
                 width: double.infinity,

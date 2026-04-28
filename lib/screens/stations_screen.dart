@@ -455,17 +455,18 @@ class _StationModalState extends State<_StationModal> {
                 TextFormField(controller: _capacityCtrl, keyboardType: TextInputType.number, validator: Validators.capacity, decoration: const InputDecoration(labelText: 'Capacity *', hintText: '1-20')),
                 const SizedBox(height: 16),
                 Text('Status', style: Theme.of(context).textTheme.bodyLarge),
-                Row(
-                  children: StationStatus.values.map((s) => Expanded(
-                    child: RadioListTile<StationStatus>(
-                      title: Text(s.label),
-                      value: s,
-                      groupValue: _status,
-                      onChanged: (v) => setState(() => _status = v!),
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    ),
-                  )).toList(),
+                RadioGroup(
+                  groupValue: _status,
+                  onChanged: (v) => setState(() => _status = v!),
+                  child: Row(
+                    children: StationStatus.values.map((s) => Expanded(
+                      child: RadioListTile<StationStatus>(
+                        title: Text(s.label),
+                        value: s,  contentPadding: EdgeInsets.zero,
+                        dense: true,
+                      ),
+                    )).toList(),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(controller: _notesCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Notes', alignLabelWithHint: true)),

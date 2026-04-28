@@ -21,7 +21,7 @@ class ErrorBanner extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.shiftCritical,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.danger.withOpacity(0.3)),
+          border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -32,9 +32,9 @@ class ErrorBanner extends StatelessWidget {
               color: AppColors.danger,
             ),
             const SizedBox(height: 12),
-            Text(
+            const Text(
               'Something went wrong',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
@@ -85,7 +85,7 @@ class InlineError extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.shiftCritical,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: AppColors.danger.withOpacity(0.3)),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [

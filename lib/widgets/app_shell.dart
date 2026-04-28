@@ -82,7 +82,7 @@ class _DesktopShell extends ConsumerWidget {
     return Scaffold(
       body: Row(
         children: [
-          _Sidebar(expanded: true),
+          const _Sidebar(expanded: true),
           Expanded(child: child),
         ],
       ),
@@ -104,7 +104,7 @@ class _TabletShell extends ConsumerWidget {
     return Scaffold(
       body: Row(
         children: [
-          _Sidebar(expanded: false),
+          const _Sidebar(expanded: false),
           Expanded(child: child),
         ],
       ),
@@ -130,7 +130,7 @@ class _MobileShell extends ConsumerWidget {
       body: child,
       bottomNavigationBar: NavigationBar(
         backgroundColor: AppColors.surface,
-        indicatorColor: AppColors.accent.withOpacity(0.15),
+        indicatorColor: AppColors.accent.withValues(alpha: 0.15),
         selectedIndex: currentIndex < 0 ? 0 : currentIndex,
         onDestinationSelected: (index) {
           context.go(_navItems[index].route);
@@ -253,7 +253,7 @@ class _SidebarItemState extends State<_SidebarItem> {
   @override
   Widget build(BuildContext context) {
     final bgColor = widget.isSelected
-        ? AppColors.accent.withOpacity(0.2)
+        ? AppColors.accent.withValues(alpha: 0.2)
         : _hovered
             ? AppColors.primaryLight
             : Colors.transparent;
@@ -262,7 +262,7 @@ class _SidebarItemState extends State<_SidebarItem> {
         ? Colors.white
         : _hovered
             ? Colors.white
-            : Colors.white.withOpacity(0.7);
+            : Colors.white.withValues(alpha: 0.7);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -337,7 +337,7 @@ class _SidebarLogout extends StatelessWidget {
       child: TextButton(
         onPressed: onLogout,
         style: TextButton.styleFrom(
-          foregroundColor: Colors.white.withOpacity(0.7),
+          foregroundColor: Colors.white.withValues(alpha: 0.7),
           padding: EdgeInsets.symmetric(
             horizontal: expanded ? 12 : 0,
             vertical: 10,

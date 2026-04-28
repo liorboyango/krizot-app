@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/station.dart';
 import '../providers/stations_provider.dart';
-import '../services/stations_service.dart';
+import '../services/station_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/validators.dart';
 
@@ -76,48 +77,42 @@ class _AddEditStationModalState extends ConsumerState<AddEditStationModal> {
       _saveError = null;
     });
 
-    final notifier = ref.read(stationsProvider.notifier);
-    Station? result;
+    final notifier = ref.read(stationsNotifierProvider.notifier);
 
-    if (_isEditing) {
-      result = await notifier.updateStation(
-        widget.station!.id,
-        UpdateStationRequest(
-          name: _nameController.text.trim(),
-          location: _locationController.text.trim(),
-          capacity: int.parse(_capacityController.text.trim()),
-          status: _status.toApiString(),
-          notes: _notesController.text.trim().isEmpty
-              ? null
-              : _notesController.text.trim(),
-        ),
-      );
-    } else {
-      result = await notifier.createStation(
-        CreateStationRequest(
-          name: _nameController.text.trim(),
-          location: _locationController.text.trim(),
-          capacity: int.parse(_capacityController.text.trim()),
-          status: _status.toApiString(),
-          notes: _notesController.text.trim().isEmpty
-              ? null
-              : _notesController.text.trim(),
-        ),
-      );
-    }
+    try {
+      final Station result = _isEditing
+          ? await notifier.updateStation(
+              widget.station!.id,
+              UpdateStationRequest(
+                name: _nameController.text.trim(),
+                location: _locationController.text.trim(),
+                capacity: int.parse(_capacityController.text.trim()),
+                status: _status,
+                notes: _notesController.text.trim().isEmpty
+                    ? null
+                    : _notesController.text.trim(),
+              ),
+            )
+          : await notifier.createStation(
+              CreateStationRequest(
+                name: _nameController.text.trim(),
+                location: _locationController.text.trim(),
+                capacity: int.parse(_capacityController.text.trim()),
+                status: _status,
+                notes: _notesController.text.trim().isEmpty
+                    ? null
+                    : _notesController.text.trim(),
+              ),
+            );
 
-    if (!mounted) return;
-
-    if (result != null) {
+      if (!mounted) return;
       Navigator.of(context).pop(result);
-    } else {
-      // Read error from provider state
-      final error = ref.read(stationsProvider).error;
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _saveError = error ?? 'Failed to save station';
+        _saveError = e.toString().replaceFirst('Exception: ', '');
       });
-      ref.read(stationsProvider.notifier).clearError();
     }
   }
 
@@ -140,11 +135,10 @@ class _AddEditStationModalState extends ConsumerState<AddEditStationModal> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (_saveError != null) ...
-                        [
-                          const SizedBox(height: 16),
-                          _buildErrorBox(_saveError!),
-                        ],
+                      if (_saveError != null) ...[
+                        const SizedBox(height: 16),
+                        _buildErrorBox(_saveError!),
+                      ],
                       const SizedBox(height: 20),
                       _buildNameField(),
                       const SizedBox(height: 16),
@@ -182,7 +176,7 @@ class _AddEditStationModalState extends ConsumerState<AddEditStationModal> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: AppColors.accent.withOpacity(0.1),
+              color: AppColors.accent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
@@ -217,8 +211,7 @@ class _AddEditStationModalState extends ConsumerState<AddEditStationModal> {
             ),
           ),
           IconButton(
-            onPressed:
-                _isSaving ? null : () => Navigator.of(context).pop(null),
+            onPressed: _isSaving ? null : () => Navigator.of(context).pop(null),
             icon: const Icon(Icons.close, size: 20),
             color: AppColors.textSecondary,
             tooltip: 'Close',
@@ -232,9 +225,9 @@ class _AddEditStationModalState extends ConsumerState<AddEditStationModal> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.danger.withOpacity(0.08),
+        color: AppColors.danger.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.danger.withOpacity(0.3)),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -258,7 +251,7 @@ class _AddEditStationModalState extends ConsumerState<AddEditStationModal> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _FieldLabel(label: 'Station Name', required: true),
+        const _FieldLabel(label: 'Station Name', required: true),
         const SizedBox(height: 6),
         TextFormField(
           controller: _nameController,
@@ -279,7 +272,7 @@ class _AddEditStationModalState extends ConsumerState<AddEditStationModal> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _FieldLabel(label: 'Location / Sector', required: true),
+        const _FieldLabel(label: 'Location / Sector', required: true),
         const SizedBox(height: 6),
         TextFormField(
           controller: _locationController,
@@ -300,7 +293,7 @@ class _AddEditStationModalState extends ConsumerState<AddEditStationModal> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _FieldLabel(label: 'Capacity (staff slots)', required: true),
+        const _FieldLabel(label: 'Capacity (staff slots)', required: true),
         const SizedBox(height: 6),
         TextFormField(
           controller: _capacityController,
@@ -332,9 +325,7 @@ class _AddEditStationModalState extends ConsumerState<AddEditStationModal> {
               groupValue: _status,
               label: 'Active',
               color: AppColors.success,
-              onChanged: _isSaving
-                  ? null
-                  : (v) => setState(() => _status = v!),
+              onChanged: _isSaving ? null : (v) => setState(() => _status = v!),
             ),
             const SizedBox(width: 24),
             _StatusRadio(
@@ -342,9 +333,7 @@ class _AddEditStationModalState extends ConsumerState<AddEditStationModal> {
               groupValue: _status,
               label: 'Closed',
               color: AppColors.danger,
-              onChanged: _isSaving
-                  ? null
-                  : (v) => setState(() => _status = v!),
+              onChanged: _isSaving ? null : (v) => setState(() => _status = v!),
             ),
           ],
         ),
@@ -379,8 +368,7 @@ class _AddEditStationModalState extends ConsumerState<AddEditStationModal> {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         OutlinedButton(
-          onPressed:
-              _isSaving ? null : () => Navigator.of(context).pop(null),
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(null),
           child: const Text('Cancel'),
         ),
         const SizedBox(width: 12),
@@ -452,26 +440,27 @@ class _StatusRadio extends StatelessWidget {
     final isSelected = value == groupValue;
     return GestureDetector(
       onTap: onChanged != null ? () => onChanged!(value) : null,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Radio<StationStatus>(
-            value: value,
-            groupValue: groupValue,
-            onChanged: onChanged,
-            activeColor: color,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight:
-                  isSelected ? FontWeight.w600 : FontWeight.w400,
-              color: isSelected ? color : AppColors.textSecondary,
+      child: RadioGroup(
+        groupValue: groupValue,
+        onChanged: (value) => onChanged?.call(value),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Radio<StationStatus>(
+              value: value,
+              activeColor: color,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-          ),
-        ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? color : AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

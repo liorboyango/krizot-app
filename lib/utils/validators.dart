@@ -117,6 +117,15 @@ class Validators {
     return null;
   }
 
+  /// Validates an optional notes field (max 500 chars).
+  static String? notes(String? value) {
+    if (value == null || value.isEmpty) return null;
+    if (value.length > 500) {
+      return 'Notes must be 500 characters or fewer';
+    }
+    return null;
+  }
+
   // ---------------------------------------------------------------------------
   // Schedule fields
   // ---------------------------------------------------------------------------

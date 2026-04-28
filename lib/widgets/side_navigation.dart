@@ -242,7 +242,7 @@ class _NavItemTileState extends State<_NavItemTile> {
                   child: Container(
                     width: 3,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),

@@ -225,7 +225,7 @@ class ScheduleService {
   Future<WeeklySchedule> getWeeklySchedule({String? weekStart}) async {
     try {
       // Try both endpoint paths used by the two backend implementations
-      final path = '/schedules/week';
+      const path = '/schedules/week';
       final response = await _client.get<Map<String, dynamic>>(
         path,
         queryParameters: weekStart != null ? {'weekStart': weekStart} : null,

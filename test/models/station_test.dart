@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:krizot_app/models/station.dart';
+import 'package:krizot_app/models/api_response.dart';
 
 void main() {
   group('StationStatus', () {
@@ -91,9 +92,9 @@ void main() {
     });
   });
 
-  group('PaginationMeta', () {
+  group('Pagination', () {
     test('fromJson parses correctly', () {
-      final meta = PaginationMeta.fromJson({
+      final meta = Pagination.fromJson({
         'page': 1,
         'limit': 20,
         'total': 45,

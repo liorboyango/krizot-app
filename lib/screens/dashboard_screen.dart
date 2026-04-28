@@ -268,7 +268,7 @@ class _NavItemState extends State<_NavItem> {
                 size: 20,
                 color: isSelected || _hovered
                     ? Colors.white
-                    : Colors.white.withOpacity(0.7),
+                    : Colors.white.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 10),
               Text(
@@ -278,7 +278,7 @@ class _NavItemState extends State<_NavItem> {
                   fontWeight: FontWeight.w500,
                   color: isSelected || _hovered
                       ? Colors.white
-                      : Colors.white.withOpacity(0.7),
+                      : Colors.white.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -482,7 +482,7 @@ class _StatsRowError extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.shiftCritical,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.danger.withOpacity(0.3)),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -524,7 +524,7 @@ class _StatCard extends StatelessWidget {
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -568,7 +568,7 @@ class _StatCard extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: accentColor.withOpacity(0.1),
+              color: accentColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: accentColor, size: 20),
@@ -665,8 +665,8 @@ class _ScheduleTable extends StatelessWidget {
         4: FlexColumnWidth(1),
       },
       children: [
-        TableRow(
-          decoration: const BoxDecoration(color: AppColors.tableRowAlt),
+        const TableRow(
+          decoration: BoxDecoration(color: AppColors.tableRowAlt),
           children: [
             _TableHeader('Station'),
             _TableHeader('Shift'),

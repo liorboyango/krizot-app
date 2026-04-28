@@ -21,4 +21,8 @@ class Breakpoints {
 
   /// Desktop: full sidebar (220px) + data tables.
   static const double desktop = 1280.0;
+
+  static bool isDesktop(double width) => width >= desktop;
+  static bool isTablet(double width) => width >= tablet && width < desktop;
+  static bool isMobile(double width) => width < tablet;
 }

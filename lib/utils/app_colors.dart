@@ -95,4 +95,14 @@ class AppColors {
 
   /// Row hover background.
   static const Color tableRowHover = Color(0xFFEBF4FF);
+
+  /// Header background for tables.
+  static const Color tableHeader = Color(0xFFF8FAFC);
+
+  // ---------------------------------------------------------------------------
+  // Sidebar
+  // ---------------------------------------------------------------------------
+
+  /// Muted text colour for sidebar items.
+  static const Color sidebarTextMuted = Color(0xB3FFFFFF);
 }
