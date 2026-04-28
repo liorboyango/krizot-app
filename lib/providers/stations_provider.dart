@@ -161,10 +161,18 @@ final stationsProvider = Provider<List<Station>>((ref) {
   return ref.watch(stationsNotifierProvider).value?.stations ?? [];
 });
 
-/// Provider for station aggregate stats.
+/// Provider for station aggregate stats, computed client-side from the
+/// full station list (the backend has no dedicated stats endpoint).
 final stationStatsProvider = FutureProvider<StationStats>((ref) async {
   final service = ref.read(stationServiceProvider);
-  return service.getStats();
+  final result = await service.getStations(const StationListParams(limit: 100));
+  final stations = result.data;
+  return StationStats(
+    total: result.pagination.total,
+    active: stations.where((s) => s.status == StationStatus.active).length,
+    closed: stations.where((s) => s.status == StationStatus.closed).length,
+    totalCapacity: stations.fold<int>(0, (sum, s) => sum + s.capacity),
+  );
 });
 
 /// Provider for a single station by ID.

@@ -4,8 +4,11 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/schedule.dart';
+import '../models/station.dart';
 import '../models/api_response.dart';
 import '../services/schedule_service.dart';
+import '../services/station_service.dart';
+import 'stations_provider.dart';
 
 // Service provider
 final scheduleServiceProvider = Provider<ScheduleService>((ref) {
@@ -164,10 +167,55 @@ final schedulesProvider = Provider<List<Schedule>>((ref) {
   return ref.watch(schedulesNotifierProvider).value?.schedules ?? [];
 });
 
-/// Provider for schedule aggregate stats.
+/// Provider for schedule aggregate stats, computed client-side by fetching
+/// schedules for the target day and the station list (the backend has no
+/// dedicated stats endpoint).
+///
+/// `criticalShifts` is defined here as unassigned shifts starting within
+/// the next hour. Tune the threshold if the product definition changes.
 final scheduleStatsProvider = FutureProvider.family<ScheduleStats, String?>((ref, date) async {
-  final service = ref.read(scheduleServiceProvider);
-  return service.getStats(date: date);
+  final scheduleService = ref.read(scheduleServiceProvider);
+  final stationService = ref.read(stationServiceProvider);
+
+  final targetDate = date != null ? DateTime.parse(date) : DateTime.now();
+  final startOfDay = DateTime(targetDate.year, targetDate.month, targetDate.day);
+  final endOfDay = startOfDay.add(const Duration(days: 1));
+
+  final scheduleResult = await scheduleService.getSchedules(
+    ScheduleListParams(startDate: startOfDay, endDate: endOfDay, limit: 500),
+  );
+  final stationResult = await stationService.getStations(
+    const StationListParams(limit: 100),
+  );
+
+  final schedules = scheduleResult.data;
+  final stations = stationResult.data;
+  final now = DateTime.now();
+
+  var onDuty = 0;
+  var openShifts = 0;
+  var criticalShifts = 0;
+  for (final s in schedules) {
+    final isLive = !s.startTime.isAfter(now) && s.endTime.isAfter(now);
+    if (isLive && s.isAssigned) onDuty++;
+    if (!s.isAssigned && s.endTime.isAfter(now)) {
+      openShifts++;
+      final minutesUntilStart = s.startTime.difference(now).inMinutes;
+      if (minutesUntilStart <= 60) criticalShifts++;
+    }
+  }
+
+  final activeStations =
+      stations.where((s) => s.status == StationStatus.active).length;
+
+  return ScheduleStats(
+    totalStations: stationResult.pagination.total,
+    onDuty: onDuty,
+    openShifts: openShifts,
+    criticalShifts: criticalShifts,
+    activeStations: activeStations,
+    date: date,
+  );
 });
 
 /// Provider for the weekly schedule grid.

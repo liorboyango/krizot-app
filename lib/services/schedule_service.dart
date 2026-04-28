@@ -1,15 +1,4 @@
 /// Schedule service for the Krizot API.
-///
-/// Handles all CRUD operations for schedules:
-/// - GET  /api/schedules              (list with filters)
-/// - GET  /api/schedules/stats        (aggregate stats)
-/// - GET  /api/schedules/week         (weekly grid)
-/// - GET  /api/schedules/:id          (single schedule)
-/// - POST /api/schedules              (create)
-/// - PUT  /api/schedules/:id          (update)
-/// - DELETE /api/schedules/:id        (delete, admin only)
-/// - POST /api/schedules/assign       (bulk assign)
-/// - POST /api/schedules/:id/unassign (unassign user)
 library;
 
 import 'package:dio/dio.dart';
@@ -187,28 +176,6 @@ class ScheduleService {
         pagination: Pagination.fromJson(paginationJson),
         message: body['message'] as String?,
       );
-    } on DioException catch (e) {
-      throw ApiClient.parseError(e);
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Schedule stats
-  // ---------------------------------------------------------------------------
-
-  /// Fetch aggregate schedule statistics.
-  ///
-  /// Optionally pass a [date] (ISO string) to get stats for a specific day.
-  /// Throws [ApiException] or [NetworkException] on failure.
-  Future<ScheduleStats> getStats({String? date}) async {
-    try {
-      final response = await _client.get<Map<String, dynamic>>(
-        '/schedules/stats',
-        queryParameters: date != null ? {'date': date} : null,
-      );
-      final body = response.data!;
-      final data = body['data'] as Map<String, dynamic>;
-      return ScheduleStats.fromJson(data);
     } on DioException catch (e) {
       throw ApiClient.parseError(e);
     }

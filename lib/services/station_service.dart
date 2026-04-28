@@ -141,25 +141,6 @@ class StationService {
   }
 
   // ---------------------------------------------------------------------------
-  // Station stats
-  // ---------------------------------------------------------------------------
-
-  /// Fetch aggregate station statistics.
-  ///
-  /// Throws [ApiException] or [NetworkException] on failure.
-  Future<StationStats> getStats() async {
-    try {
-      final response =
-          await _client.get<Map<String, dynamic>>('/stations/stats');
-      final body = response.data!;
-      final data = body['data'] as Map<String, dynamic>;
-      return StationStats.fromJson(data);
-    } on DioException catch (e) {
-      throw ApiClient.parseError(e);
-    }
-  }
-
-  // ---------------------------------------------------------------------------
   // Single station
   // ---------------------------------------------------------------------------
 

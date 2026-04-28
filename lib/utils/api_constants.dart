@@ -17,12 +17,10 @@ class ApiConstants {
 
   // Station endpoints
   static const String stations = '/stations';
-  static const String stationStats = '/stations/stats';
   static String stationById(String id) => '/stations/$id';
 
   // Schedule endpoints
   static const String schedules = '/schedules';
-  static const String scheduleStats = '/schedules/stats';
   static const String scheduleWeek = '/schedules/week';
   static const String scheduleWeekly = '/schedules/weekly';
   static const String scheduleAssign = '/schedules/assign';
