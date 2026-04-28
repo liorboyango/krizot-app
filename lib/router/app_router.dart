@@ -48,7 +48,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: true,
     redirect: (BuildContext context, GoRouterState state) {
       final isLoading = authState is AsyncLoading;
-      final isAuthenticated = authState.valueOrNull is AuthStateAuthenticated;
+      final isAuthenticated = authState.value is AuthStateAuthenticated;
       final isLoginRoute = state.matchedLocation == AppRoutes.login;
 
       // While restoring session, stay put.

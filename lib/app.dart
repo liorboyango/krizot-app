@@ -44,7 +44,7 @@ class KrizotApp extends ConsumerWidget {
     return GoRouter(
       initialLocation: AppRoutes.dashboard,
       redirect: (context, state) {
-        final authState = ref.read(authStateProvider).valueOrNull;
+        final authState = ref.read(authStateProvider).value;
         final isAuthenticated = authState is AuthStateAuthenticated;
         final isLoginRoute = state.matchedLocation == AppRoutes.login;
 
@@ -82,6 +82,6 @@ class KrizotApp extends ConsumerWidget {
 /// A [Listenable] that notifies GoRouter whenever the auth state changes.
 class _AuthStateListenable extends ChangeNotifier {
   _AuthStateListenable(WidgetRef ref) {
-    ref.listen(authStateProvider, (_, __) => notifyListeners());
+    ref.listen(authStateProvider, (_, _) => notifyListeners());
   }
 }

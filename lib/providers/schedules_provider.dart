@@ -73,14 +73,14 @@ class SchedulesNotifier extends AsyncNotifier<ScheduleListState> {
 
   /// Reload the schedule list with the current parameters.
   Future<void> refresh() async {
-    final currentParams = state.valueOrNull?.params ?? const ScheduleListParams();
+    final currentParams = state.value?.params ?? const ScheduleListParams();
     state = const AsyncValue.loading();
     state = AsyncValue.data(await _fetchSchedules(currentParams));
   }
 
   /// Filter schedules by station.
   Future<void> filterByStation(String? stationId) async {
-    final currentParams = state.valueOrNull?.params ?? const ScheduleListParams();
+    final currentParams = state.value?.params ?? const ScheduleListParams();
     final newParams = ScheduleListParams(
       page: 1,
       limit: currentParams.limit,
@@ -95,7 +95,7 @@ class SchedulesNotifier extends AsyncNotifier<ScheduleListState> {
 
   /// Filter schedules by date range.
   Future<void> filterByDateRange(DateTime start, DateTime end) async {
-    final currentParams = state.valueOrNull?.params ?? const ScheduleListParams();
+    final currentParams = state.value?.params ?? const ScheduleListParams();
     final newParams = ScheduleListParams(
       page: 1,
       limit: currentParams.limit,
@@ -118,7 +118,7 @@ class SchedulesNotifier extends AsyncNotifier<ScheduleListState> {
   /// Update an existing schedule.
   Future<Schedule> updateSchedule(String id, UpdateScheduleRequest request) async {
     final schedule = await _service.updateSchedule(id, request);
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current != null) {
       final updatedList = current.schedules.map((s) => s.id == id ? schedule : s).toList();
       state = AsyncValue.data(current.copyWith(schedules: updatedList));
@@ -129,7 +129,7 @@ class SchedulesNotifier extends AsyncNotifier<ScheduleListState> {
   /// Delete a schedule.
   Future<void> deleteSchedule(String id) async {
     await _service.deleteSchedule(id);
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current != null) {
       final updatedList = current.schedules.where((s) => s.id != id).toList();
       state = AsyncValue.data(current.copyWith(schedules: updatedList));
@@ -146,7 +146,7 @@ class SchedulesNotifier extends AsyncNotifier<ScheduleListState> {
   /// Unassign a user from a schedule.
   Future<Schedule> unassign(String scheduleId) async {
     final schedule = await _service.unassign(scheduleId);
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current != null) {
       final updatedList = current.schedules.map((s) => s.id == scheduleId ? schedule : s).toList();
       state = AsyncValue.data(current.copyWith(schedules: updatedList));
@@ -161,7 +161,7 @@ final schedulesNotifierProvider =
 
 /// Convenience provider for the schedule list.
 final schedulesProvider = Provider<List<Schedule>>((ref) {
-  return ref.watch(schedulesNotifierProvider).valueOrNull?.schedules ?? [];
+  return ref.watch(schedulesNotifierProvider).value?.schedules ?? [];
 });
 
 /// Provider for schedule aggregate stats.

@@ -73,14 +73,14 @@ class StationsNotifier extends AsyncNotifier<StationListState> {
 
   /// Reload the station list with the current parameters.
   Future<void> refresh() async {
-    final currentParams = state.valueOrNull?.params ?? const StationListParams();
+    final currentParams = state.value?.params ?? const StationListParams();
     state = const AsyncValue.loading();
     state = AsyncValue.data(await _fetchStations(currentParams));
   }
 
   /// Update the search query and reload.
   Future<void> search(String query) async {
-    final currentParams = state.valueOrNull?.params ?? const StationListParams();
+    final currentParams = state.value?.params ?? const StationListParams();
     final newParams = StationListParams(
       page: 1,
       limit: currentParams.limit,
@@ -95,7 +95,7 @@ class StationsNotifier extends AsyncNotifier<StationListState> {
 
   /// Filter by status and reload.
   Future<void> filterByStatus(StationStatus? status) async {
-    final currentParams = state.valueOrNull?.params ?? const StationListParams();
+    final currentParams = state.value?.params ?? const StationListParams();
     final newParams = StationListParams(
       page: 1,
       limit: currentParams.limit,
@@ -110,7 +110,7 @@ class StationsNotifier extends AsyncNotifier<StationListState> {
 
   /// Navigate to a specific page.
   Future<void> goToPage(int page) async {
-    final currentParams = state.valueOrNull?.params ?? const StationListParams();
+    final currentParams = state.value?.params ?? const StationListParams();
     final newParams = StationListParams(
       page: page,
       limit: currentParams.limit,
@@ -133,7 +133,7 @@ class StationsNotifier extends AsyncNotifier<StationListState> {
   /// Update an existing station and refresh the list.
   Future<Station> updateStation(String id, UpdateStationRequest request) async {
     final station = await _service.updateStation(id, request);
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current != null) {
       final updatedList = current.stations.map((s) => s.id == id ? station : s).toList();
       state = AsyncValue.data(current.copyWith(stations: updatedList));
@@ -144,7 +144,7 @@ class StationsNotifier extends AsyncNotifier<StationListState> {
   /// Delete a station and refresh the list.
   Future<void> deleteStation(String id, {bool force = false}) async {
     await _service.deleteStation(id, force: force);
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current != null) {
       final updatedList = current.stations.where((s) => s.id != id).toList();
       state = AsyncValue.data(current.copyWith(stations: updatedList));
@@ -158,7 +158,7 @@ final stationsNotifierProvider =
 
 /// Convenience provider for the station list.
 final stationsProvider = Provider<List<Station>>((ref) {
-  return ref.watch(stationsNotifierProvider).valueOrNull?.stations ?? [];
+  return ref.watch(stationsNotifierProvider).value?.stations ?? [];
 });
 
 /// Provider for station aggregate stats.

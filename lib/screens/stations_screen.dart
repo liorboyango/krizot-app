@@ -110,7 +110,7 @@ class _StationsToolbar extends ConsumerWidget {
 class _StatusFilterDropdown extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentStatus = ref.watch(stationsNotifierProvider).valueOrNull?.params.status;
+    final currentStatus = ref.watch(stationsNotifierProvider).value?.params.status;
     return DropdownButton<StationStatus?>(
       value: currentStatus,
       hint: const Text('All Status'),
@@ -304,7 +304,7 @@ class _StationsCardList extends ConsumerWidget {
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: state.stations.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemBuilder: (context, i) {
             final station = state.stations[i];
             return Card(

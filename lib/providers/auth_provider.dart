@@ -123,7 +123,7 @@ final authStateProvider =
 
 /// Convenience provider that returns the current [User] or null.
 final currentUserProvider = Provider<User?>((ref) {
-  final authState = ref.watch(authStateProvider).valueOrNull;
+  final authState = ref.watch(authStateProvider).value;
   if (authState is AuthStateAuthenticated) return authState.user;
   return null;
 });
