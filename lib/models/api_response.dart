@@ -3,43 +3,48 @@
 /// Error: { success: false, error: { code, message, details? } }
 library;
 
-/// Pagination metadata returned by list endpoints.
+/// Pagination metadata returned by list endpoints. Supports both the legacy
+/// page-based shape (page/total/totalPages) and the newer cursor-based shape
+/// (limit/nextCursor) — all classic fields are nullable.
 class Pagination {
   const Pagination({
-    required this.page,
     required this.limit,
-    required this.total,
-    required this.totalPages,
+    this.page,
+    this.total,
+    this.totalPages,
     this.hasNextPage,
     this.hasPrevPage,
     this.perPage,
+    this.nextCursor,
   });
 
-  final int page;
   final int limit;
-  final int total;
-  final int totalPages;
+  final int? page;
+  final int? total;
+  final int? totalPages;
   final bool? hasNextPage;
   final bool? hasPrevPage;
   final int? perPage;
+  final String? nextCursor;
 
   factory Pagination.fromJson(Map<String, dynamic> json) {
     return Pagination(
-      page: (json['page'] as num).toInt(),
       limit: (json['limit'] as num?)?.toInt() ??
           (json['perPage'] as num?)?.toInt() ??
           20,
-      total: (json['total'] as num).toInt(),
-      totalPages: (json['totalPages'] as num).toInt(),
+      page: (json['page'] as num?)?.toInt(),
+      total: (json['total'] as num?)?.toInt(),
+      totalPages: (json['totalPages'] as num?)?.toInt(),
       hasNextPage: json['hasNextPage'] as bool?,
       hasPrevPage: json['hasPrevPage'] as bool?,
       perPage: (json['perPage'] as num?)?.toInt(),
+      nextCursor: json['nextCursor'] as String?,
     );
   }
 
   @override
   String toString() =>
-      'Pagination(page: $page, limit: $limit, total: $total, totalPages: $totalPages)';
+      'Pagination(page: $page, limit: $limit, total: $total, totalPages: $totalPages, nextCursor: $nextCursor)';
 }
 
 /// Typed API response for list endpoints.

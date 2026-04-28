@@ -168,7 +168,7 @@ final stationStatsProvider = FutureProvider<StationStats>((ref) async {
   final result = await service.getStations(const StationListParams(limit: 100));
   final stations = result.data;
   return StationStats(
-    total: result.pagination.total,
+    total: result.pagination.total ?? stations.length,
     active: stations.where((s) => s.status == StationStatus.active).length,
     closed: stations.where((s) => s.status == StationStatus.closed).length,
     totalCapacity: stations.fold<int>(0, (sum, s) => sum + s.capacity),

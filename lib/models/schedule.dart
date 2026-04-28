@@ -193,16 +193,33 @@ class WeeklyGridRow {
 
   factory WeeklyGridRow.fromJson(Map<String, dynamic> json) {
     final stationJson = json['station'] as Map<String, dynamic>;
-    final daysJson = json['days'] as Map<String, dynamic>;
+    final daysJson = json['days'];
 
     final Map<int, List<Schedule>> days = {};
-    daysJson.forEach((key, value) {
-      final index = int.tryParse(key) ?? 0;
-      final scheduleList = (value as List<dynamic>)
+
+    List<Schedule> parseScheduleList(dynamic value) {
+      if (value == null) return const [];
+      return (value as List<dynamic>)
           .map((e) => Schedule.fromJson(e as Map<String, dynamic>))
           .toList();
-      days[index] = scheduleList;
-    });
+    }
+
+    if (daysJson is Map<String, dynamic>) {
+      daysJson.forEach((key, value) {
+        final index = int.tryParse(key) ?? 0;
+        days[index] = parseScheduleList(value);
+      });
+    } else if (daysJson is List<dynamic>) {
+      for (var i = 0; i < daysJson.length; i++) {
+        final entry = daysJson[i];
+        if (entry is Map<String, dynamic> && entry.containsKey('schedules')) {
+          final index = (entry['index'] as num?)?.toInt() ?? i;
+          days[index] = parseScheduleList(entry['schedules']);
+        } else {
+          days[i] = parseScheduleList(entry);
+        }
+      }
+    }
 
     return WeeklyGridRow(
       station: Station.fromJson(stationJson),

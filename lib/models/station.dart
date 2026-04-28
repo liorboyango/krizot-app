@@ -11,10 +11,10 @@ enum StationStatus {
 
   /// Parse from API string (case-insensitive).
   static StationStatus fromString(String value) {
-    switch (value.toUpperCase()) {
-      case 'ACTIVE':
+    switch (value.toLowerCase()) {
+      case 'active':
         return StationStatus.active;
-      case 'CLOSED':
+      case 'closed':
         return StationStatus.closed;
       default:
         return StationStatus.active;
@@ -25,9 +25,9 @@ enum StationStatus {
   String toApiString() {
     switch (this) {
       case StationStatus.active:
-        return 'ACTIVE';
+        return 'active';
       case StationStatus.closed:
-        return 'CLOSED';
+        return 'closed';
     }
   }
 
@@ -73,7 +73,7 @@ class Station {
       name: json['name'] as String,
       location: json['location'] as String,
       capacity: (json['capacity'] as num).toInt(),
-      status: StationStatus.fromString((json['status'] as String?) ?? 'ACTIVE'),
+      status: StationStatus.fromString((json['status'] as String?) ?? 'active'),
       notes: json['notes'] as String?,
       scheduleCount: (json['scheduleCount'] as num?)?.toInt() ?? 0,
       createdAt: json['createdAt'] != null

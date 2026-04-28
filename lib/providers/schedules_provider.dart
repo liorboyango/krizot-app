@@ -209,7 +209,7 @@ final scheduleStatsProvider = FutureProvider.family<ScheduleStats, String?>((ref
       stations.where((s) => s.status == StationStatus.active).length;
 
   return ScheduleStats(
-    totalStations: stationResult.pagination.total,
+    totalStations: stationResult.pagination.total ?? stations.length,
     onDuty: onDuty,
     openShifts: openShifts,
     criticalShifts: criticalShifts,

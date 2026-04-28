@@ -182,7 +182,13 @@ class _ScheduleHeader extends StatelessWidget {
           Text('Schedule', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(width: 24),
           IconButton(icon: const Icon(Icons.chevron_left), onPressed: onPrev, tooltip: 'Previous week'),
-          Text(label, style: Theme.of(context).textTheme.bodyLarge),
+          Flexible(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodyLarge,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           IconButton(icon: const Icon(Icons.chevron_right), onPressed: onNext, tooltip: 'Next week'),
           const Spacer(),
           ElevatedButton.icon(

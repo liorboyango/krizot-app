@@ -19,6 +19,8 @@ import '../utils/app_colors.dart';
 import '../utils/breakpoints.dart';
 import '../utils/error_handler.dart';
 import '../app.dart';
+import 'schedule_screen.dart';
+import 'stations_screen.dart';
 
 /// Dashboard page.
 class DashboardScreen extends ConsumerWidget {
@@ -109,8 +111,8 @@ class _MobileDashboardState extends ConsumerState<_MobileDashboard> {
         index: _selectedIndex,
         children: const [
           _DashboardContent(),
-          Center(child: Text('Schedule')),
-          Center(child: Text('Stations')),
+          ScheduleScreen(),
+          StationsScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
