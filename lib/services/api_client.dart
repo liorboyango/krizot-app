@@ -1,26 +1,19 @@
 /// Dio-based HTTP client for the Krizot API.
 ///
 /// Features:
-/// - Automatic JWT Bearer token injection
-/// - Token refresh on 401 responses
+/// - Firebase ID token injected as Bearer on every request
+/// - On 401, force-refresh the ID token and retry the original request once
 /// - Structured error parsing
 /// - Request/response logging in debug mode
-/// - Retry logic for transient failures
 library;
 
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../models/api_response.dart';
-
-/// Storage keys for JWT tokens.
-class _StorageKeys {
-  static const accessToken = 'krizot_access_token';
-  static const refreshToken = 'krizot_refresh_token';
-}
 
 /// Singleton API client used throughout the app.
 class ApiClient {
@@ -49,17 +42,13 @@ class ApiClient {
   // ---------------------------------------------------------------------------
 
   late final Dio _dio;
-  late final Dio _refreshDio; // Separate instance to avoid interceptor loops
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
-
-  bool _isRefreshing = false;
-  final List<Completer<void>> _refreshQueue = [];
 
   // ---------------------------------------------------------------------------
   // Initialisation
   // ---------------------------------------------------------------------------
 
-  /// Initialise the Dio client. Must be called once at app startup.
+  /// Initialise the Dio client. Must be called once at app startup,
+  /// after `Firebase.initializeApp()`.
   void init() {
     final baseOptions = BaseOptions(
       baseUrl: baseUrl,
@@ -73,9 +62,7 @@ class ApiClient {
     );
 
     _dio = Dio(baseOptions);
-    _refreshDio = Dio(baseOptions);
 
-    // Add interceptors in order
     _dio.interceptors.addAll([
       _AuthInterceptor(this),
       if (kDebugMode) LogInterceptor(
@@ -89,71 +76,9 @@ class ApiClient {
   }
 
   // ---------------------------------------------------------------------------
-  // Token management
-  // ---------------------------------------------------------------------------
-
-  /// Retrieve the stored access token.
-  Future<String?> getAccessToken() =>
-      _storage.read(key: _StorageKeys.accessToken);
-
-  /// Retrieve the stored refresh token.
-  Future<String?> getRefreshToken() =>
-      _storage.read(key: _StorageKeys.refreshToken);
-
-  /// Persist both tokens after a successful login or refresh.
-  Future<void> saveTokens({
-    required String accessToken,
-    required String refreshToken,
-  }) async {
-    await Future.wait([
-      _storage.write(key: _StorageKeys.accessToken, value: accessToken),
-      _storage.write(key: _StorageKeys.refreshToken, value: refreshToken),
-    ]);
-  }
-
-  /// Clear all stored tokens (logout).
-  Future<void> clearTokens() async {
-    await Future.wait([
-      _storage.delete(key: _StorageKeys.accessToken),
-      _storage.delete(key: _StorageKeys.refreshToken),
-    ]);
-  }
-
-  /// Attempt to refresh the access token using the stored refresh token.
-  /// Returns the new access token, or null if refresh failed.
-  Future<String?> refreshAccessToken() async {
-    final refreshToken = await getRefreshToken();
-    if (refreshToken == null) return null;
-
-    try {
-      final response = await _refreshDio.post(
-        '/auth/refresh',
-        data: {'refreshToken': refreshToken},
-      );
-
-      final responseData = response.data as Map<String, dynamic>;
-      final data = responseData['data'] as Map<String, dynamic>?;
-      final newToken = data?['token'] as String? ??
-          data?['accessToken'] as String?;
-
-      if (newToken != null) {
-        await _storage.write(
-          key: _StorageKeys.accessToken,
-          value: newToken,
-        );
-        return newToken;
-      }
-    } catch (_) {
-      // Refresh failed — caller should redirect to login
-    }
-    return null;
-  }
-
-  // ---------------------------------------------------------------------------
   // HTTP helpers
   // ---------------------------------------------------------------------------
 
-  /// Perform a GET request.
   Future<Response<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
@@ -165,7 +90,6 @@ class ApiClient {
         options: options,
       );
 
-  /// Perform a POST request.
   Future<Response<T>> post<T>(
     String path, {
     dynamic data,
@@ -179,7 +103,6 @@ class ApiClient {
         options: options,
       );
 
-  /// Perform a PUT request.
   Future<Response<T>> put<T>(
     String path, {
     dynamic data,
@@ -193,7 +116,6 @@ class ApiClient {
         options: options,
       );
 
-  /// Perform a PATCH request.
   Future<Response<T>> patch<T>(
     String path, {
     dynamic data,
@@ -207,7 +129,6 @@ class ApiClient {
         options: options,
       );
 
-  /// Perform a DELETE request.
   Future<Response<T>> delete<T>(
     String path, {
     dynamic data,
@@ -269,22 +190,31 @@ class ApiClient {
 // ---------------------------------------------------------------------------
 
 /// Interceptor that:
-/// 1. Injects the Bearer token into every request.
-/// 2. On 401, attempts a token refresh and retries the original request.
-/// 3. On second 401, clears tokens (forces re-login).
+/// 1. Injects the Firebase ID token as a Bearer header on every request
+///    (the SDK auto-refreshes tokens that are within 5 minutes of expiry).
+/// 2. On 401, force-refreshes the ID token and retries the original request once.
 class _AuthInterceptor extends Interceptor {
   _AuthInterceptor(this._client);
 
   final ApiClient _client;
+
+  static const _retriedFlag = '_krizotAuthRetried';
 
   @override
   Future<void> onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    final token = await _client.getAccessToken();
-    if (token != null) {
-      options.headers['Authorization'] = 'Bearer $token';
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final token = await user.getIdToken();
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+      } on FirebaseAuthException catch (_) {
+        // Fall through; the request will likely 401 and be handled below.
+      }
     }
     handler.next(options);
   }
@@ -299,67 +229,34 @@ class _AuthInterceptor extends Interceptor {
       return;
     }
 
-    // Avoid refresh loops for the refresh endpoint itself
-    if (err.requestOptions.path.contains('/auth/refresh') ||
-        err.requestOptions.path.contains('/auth/login')) {
-      await _client.clearTokens();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
       handler.next(err);
       return;
     }
 
-    if (_client._isRefreshing) {
-      // Queue this request until the ongoing refresh completes
-      final completer = Completer<void>();
-      _client._refreshQueue.add(completer);
-      await completer.future;
-
-      // Retry with the new token
-      final newToken = await _client.getAccessToken();
-      if (newToken != null) {
-        err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
-        try {
-          final response = await _client._dio.fetch(err.requestOptions);
-          handler.resolve(response);
-        } catch (e) {
-          handler.next(err);
-        }
-      } else {
-        handler.next(err);
-      }
+    if (err.requestOptions.extra[_retriedFlag] == true) {
+      // Already retried once with a fresh token — give up.
+      handler.next(err);
       return;
     }
 
-    _client._isRefreshing = true;
     try {
-      final newToken = await _client.refreshAccessToken();
-      if (newToken != null) {
-        // Resolve all queued requests
-        for (final c in _client._refreshQueue) {
-          c.complete();
-        }
-        _client._refreshQueue.clear();
-
-        // Retry the original request
-        err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
-        final response = await _client._dio.fetch(err.requestOptions);
-        handler.resolve(response);
-      } else {
-        await _client.clearTokens();
-        for (final c in _client._refreshQueue) {
-          c.completeError('Token refresh failed');
-        }
-        _client._refreshQueue.clear();
+      final newToken = await user.getIdToken(true);
+      if (newToken == null) {
         handler.next(err);
+        return;
       }
-    } catch (e) {
-      await _client.clearTokens();
-      for (final c in _client._refreshQueue) {
-        c.completeError(e);
-      }
-      _client._refreshQueue.clear();
+
+      err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
+      err.requestOptions.extra[_retriedFlag] = true;
+
+      final response = await _client._dio.fetch(err.requestOptions);
+      handler.resolve(response);
+    } on DioException catch (e) {
+      handler.next(e);
+    } on FirebaseAuthException catch (_) {
       handler.next(err);
-    } finally {
-      _client._isRefreshing = false;
     }
   }
 }

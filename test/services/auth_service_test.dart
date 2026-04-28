@@ -26,7 +26,7 @@ void main() {
   });
 
   group('AuthService.login', () {
-    test('returns AuthResult on successful login', () async {
+    test('returns user profile on successful login', () async {
       dioAdapter.onPost(
         '/auth/login',
         (server) => server.reply(
@@ -34,8 +34,6 @@ void main() {
           {
             'success': true,
             'data': {
-              'token': 'access_token_123',
-              'refreshToken': 'refresh_token_456',
               'user': {
                 'id': 'user-1',
                 'email': 'admin@krizot.com',
@@ -45,7 +43,7 @@ void main() {
             },
           },
         ),
-        data: {'email': 'admin@krizot.com', 'password': 'password123'},
+        data: {'idToken': 'firebase_id_token_xyz'},
       );
 
       // Note: In a real test environment, we'd inject the mocked Dio.
@@ -62,11 +60,11 @@ void main() {
             'success': false,
             'error': {
               'code': 'UNAUTHORIZED',
-              'message': 'Invalid email or password',
+              'message': 'Invalid ID token',
             },
           },
         ),
-        data: {'email': 'wrong@krizot.com', 'password': 'wrongpass'},
+        data: {'idToken': 'bad_token'},
       );
 
       expect(true, isTrue); // Placeholder assertion

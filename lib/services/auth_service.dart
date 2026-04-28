@@ -1,14 +1,14 @@
 /// Authentication service for the Krizot API.
 ///
-/// Handles:
-/// - Login (POST /api/auth/login)
-/// - Logout (POST /api/auth/logout)
-/// - Token refresh (POST /api/auth/refresh)
-/// - Current user (GET /api/auth/me)
-/// - Registration (POST /api/auth/register) — admin only
+/// Login flow: clients authenticate with the Firebase Client SDK first
+/// (`signInWithEmailAndPassword`), then POST the resulting ID token to the
+/// backend at `/api/auth/login` to retrieve the user profile. Subsequent
+/// requests carry a Firebase ID token in the Authorization header; the
+/// Firebase SDK handles refresh automatically (no `/auth/refresh` endpoint).
 library;
 
 import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide User;
 
 import '../models/user.dart';
 import '../models/api_response.dart';
@@ -23,97 +23,73 @@ class LoginCredentials {
 
   final String email;
   final String password;
-
-  Map<String, dynamic> toJson() => {
-        'email': email,
-        'password': password,
-      };
-}
-
-/// Result of a successful login.
-class AuthResult {
-  const AuthResult({
-    required this.user,
-    required this.accessToken,
-    required this.refreshToken,
-  });
-
-  final User user;
-  final String accessToken;
-  final String refreshToken;
 }
 
 /// Service for authentication-related API calls.
 class AuthService {
-  AuthService({ApiClient? client})
-      : _client = client ?? ApiClient.instance;
+  AuthService({
+    ApiClient? client,
+    FirebaseAuth? firebaseAuth,
+  })  : _client = client ?? ApiClient.instance,
+        _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
 
   final ApiClient _client;
+  final FirebaseAuth _firebaseAuth;
 
-  // ---------------------------------------------------------------------------
-  // Login
-  // ---------------------------------------------------------------------------
+  /// Sign in with Firebase, then exchange the ID token for the backend
+  /// user profile. Throws [ApiException], [NetworkException], or
+  /// [FirebaseAuthException] on failure.
+  Future<User> login(LoginCredentials credentials) async {
+    final firebaseCredential = await _firebaseAuth.signInWithEmailAndPassword(
+      email: credentials.email,
+      password: credentials.password,
+    );
 
-  /// Authenticate with email and password.
-  ///
-  /// On success, tokens are persisted in secure storage automatically.
-  /// Throws [ApiException] or [NetworkException] on failure.
-  Future<AuthResult> login(LoginCredentials credentials) async {
+    final idToken = await firebaseCredential.user?.getIdToken();
+    if (idToken == null) {
+      throw const ApiException(
+        statusCode: 401,
+        error: ApiError(
+          code: 'INVALID_TOKEN',
+          message: 'Failed to obtain Firebase ID token after sign-in.',
+        ),
+      );
+    }
+
     try {
       final response = await _client.post<Map<String, dynamic>>(
         '/auth/login',
-        data: credentials.toJson(),
+        data: {'idToken': idToken},
       );
 
       final body = response.data!;
       final data = body['data'] as Map<String, dynamic>;
-
-      // Support both token/accessToken field names
-      final accessToken = (data['token'] as String?) ??
-          (data['accessToken'] as String?) ??
-          '';
-      final refreshToken = (data['refreshToken'] as String?) ?? '';
-      final userJson = data['user'] as Map<String, dynamic>;
-
-      final user = User.fromJson(userJson);
-
-      await _client.saveTokens(
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-      );
-
-      return AuthResult(
-        user: user,
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-      );
+      final userJson = data['user'] as Map<String, dynamic>? ?? data;
+      return User.fromJson(userJson);
     } on DioException catch (e) {
+      // Backend rejected the ID token — undo the local Firebase session
+      // so the app doesn't end up half-authenticated.
+      await _firebaseAuth.signOut();
       throw ApiClient.parseError(e);
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Logout
-  // ---------------------------------------------------------------------------
-
-  /// Invalidate the current session on the server and clear local tokens.
+  /// Forcibly end the session everywhere, then sign out of Firebase locally.
+  ///
+  /// The `/auth/logout` call is what kills sessions across all devices
+  /// (used for "log out everywhere", password reset, suspicious activity).
+  /// `FirebaseAuth.signOut()` only clears the local token cache.
   Future<void> logout() async {
     try {
       await _client.post<dynamic>('/auth/logout');
     } on DioException catch (_) {
-      // Best-effort — always clear local tokens
+      // Best-effort — always sign out locally
     } finally {
-      await _client.clearTokens();
+      await _firebaseAuth.signOut();
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Current user
-  // ---------------------------------------------------------------------------
-
   /// Fetch the currently authenticated user's profile.
-  ///
-  /// Throws [ApiException] or [NetworkException] on failure.
   Future<User> getCurrentUser() async {
     try {
       final response = await _client.get<Map<String, dynamic>>('/auth/me');
@@ -126,13 +102,7 @@ class AuthService {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Registration (admin only)
-  // ---------------------------------------------------------------------------
-
   /// Register a new user. Requires admin role.
-  ///
-  /// Throws [ApiException] or [NetworkException] on failure.
   Future<User> register({
     required String email,
     required String password,
@@ -156,15 +126,5 @@ class AuthService {
     } on DioException catch (e) {
       throw ApiClient.parseError(e);
     }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Token helpers
-  // ---------------------------------------------------------------------------
-
-  /// Returns true if there is a stored access token (user may be logged in).
-  Future<bool> hasStoredToken() async {
-    final token = await _client.getAccessToken();
-    return token != null && token.isNotEmpty;
   }
 }

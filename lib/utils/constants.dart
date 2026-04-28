@@ -13,12 +13,6 @@ class AppConstants {
   /// App version
   static const String appVersion = '1.0.0';
 
-  /// JWT token storage key
-  static const String tokenKey = 'krizot_access_token';
-
-  /// Refresh token storage key
-  static const String refreshTokenKey = 'krizot_refresh_token';
-
   /// User data storage key
   static const String userKey = 'krizot_user';
 
