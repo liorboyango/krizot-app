@@ -1,0 +1,179 @@
+import 'package:flutter/material.dart';
+
+import '../../../../app_config/service_locator.dart';
+import '../../../../entities/shift.dart';
+import '../../../../entities/station.dart';
+import '../../../../managers/shifts_manager.dart';
+import '../../../../utils/app_colors.dart';
+import '../../../../utils/snackbar_util.dart';
+import '../../../../utils/time_util.dart';
+
+/// Create or edit a shift's time block. Shift length defaults to the
+/// station's `defaultShiftMinutes` but is fully editable (DESIGN.md:
+/// "default 2-hour blocks, fully editable").
+class ShiftEditorDialog extends StatefulWidget {
+  final Station station;
+  final DateTime day;
+  final Shift? shift;
+
+  const ShiftEditorDialog({
+    super.key,
+    required this.station,
+    required this.day,
+    this.shift,
+  });
+
+  static Future<void> show(
+    BuildContext context, {
+    required Station station,
+    required DateTime day,
+    Shift? shift,
+  }) =>
+      showDialog(
+        context: context,
+        routeSettings: const RouteSettings(name: 'shift_editor_dialog'),
+        builder: (_) =>
+            ShiftEditorDialog(station: station, day: day, shift: shift),
+      );
+
+  @override
+  State<ShiftEditorDialog> createState() => _ShiftEditorDialogState();
+}
+
+class _ShiftEditorDialogState extends State<ShiftEditorDialog> {
+  late TimeOfDay start;
+  late TimeOfDay end;
+  bool isBusy = false;
+
+  bool get isEditing => widget.shift != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.shift != null) {
+      start = TimeOfDay.fromDateTime(widget.shift!.start);
+      end = TimeOfDay.fromDateTime(widget.shift!.end);
+    } else {
+      // Default: first active window start for on-demand stations, 08:00
+      // otherwise, plus the station's default shift length.
+      start = widget.station.isAroundTheClock ||
+              widget.station.activeWindows.isEmpty
+          ? const TimeOfDay(hour: 8, minute: 0)
+          : widget.station.activeWindows.first.startTime;
+      final startMinutes = start.hour * 60 + start.minute;
+      final endMinutes =
+          (startMinutes + widget.station.defaultShiftMinutes) % (24 * 60);
+      end = TimeOfDay(hour: endMinutes ~/ 60, minute: endMinutes % 60);
+    }
+  }
+
+  DateTime _toDateTime(TimeOfDay time, {bool rollToNextDay = false}) {
+    final base = DateTime(
+      widget.day.year,
+      widget.day.month,
+      widget.day.day,
+      time.hour,
+      time.minute,
+    );
+    return rollToNextDay ? base.add(const Duration(days: 1)) : base;
+  }
+
+  Future<void> onSavePressed() async {
+    final startAt = _toDateTime(start);
+    // An end at/before the start means the shift crosses midnight.
+    var endAt = _toDateTime(end);
+    if (!endAt.isAfter(startAt)) {
+      endAt = _toDateTime(end, rollToNextDay: true);
+    }
+
+    setState(() => isBusy = true);
+    final shiftsManager = locator<ShiftsManager>();
+    final bool success;
+    if (isEditing) {
+      success = await shiftsManager.updateShiftTimes(
+          widget.shift!.id, startAt, endAt);
+    } else {
+      success = await shiftsManager.createShift(Shift(
+            id: '',
+            stationId: widget.station.id,
+            start: startAt,
+            end: endAt,
+            dayKey: TimeUtil.dayKey(startAt),
+          )) !=
+          null;
+    }
+    if (!mounted) return;
+    setState(() => isBusy = false);
+    if (success) {
+      Navigator.pop(context);
+    } else {
+      SnackBarUtil.showSnackBar(
+          context, 'Failed to save shift.', Variant.ERROR);
+    }
+  }
+
+  Future<void> pickTime({required bool isStart}) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: isStart ? start : end,
+      helpText: isStart ? 'Shift start' : 'Shift end',
+    );
+    if (picked == null) return;
+    setState(() {
+      if (isStart) {
+        start = picked;
+      } else {
+        end = picked;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(isEditing
+          ? 'Edit shift — ${widget.station.name}'
+          : 'New shift — ${widget.station.name}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            TimeUtil.formatDayLabel(widget.day),
+            style: const TextStyle(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => pickTime(isStart: true),
+                  icon: const Icon(Icons.schedule, size: 18),
+                  label: Text('Start ${start.format(context)}'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => pickTime(isStart: false),
+                  icon: const Icon(Icons.schedule, size: 18),
+                  label: Text('End ${end.format(context)}'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: isBusy ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: isBusy ? null : onSavePressed,
+          child: Text(isBusy ? 'Saving…' : (isEditing ? 'Save' : 'Create')),
+        ),
+      ],
+    );
+  }
+}
