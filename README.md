@@ -1,125 +1,58 @@
-# Krizot App
+# Krizot
 
-Krizot is a cross-platform Flutter application for shift managers and operations officers. It provides a desktop-optimized administrative scheduler with dynamic station management.
+Shift scheduling & emergency dispatch on Flutter + Firebase, per [DESIGN.md](DESIGN.md):
 
-## Features
+1. **Admin Scheduler** (web) — stations (24/7 or on-demand windows), certification-gated assignment, drag & drop, AI Auto-Fill and Smart-Healing replacement suggestions.
+2. **Employee app** (mobile) — Focus View of current/upcoming assignment, push notifications, Acknowledge loop (manager sees a green check).
+3. **Emergency Dispatch** (web) — pre-defined event types alerting all matching responders, live acknowledgement tally.
 
-- 🔐 **Secure Authentication** — JWT-based login with secure token storage
-- 🏗️ **Station Management** — Full CRUD for operational stations with desktop table and mobile card views
-- 📅 **Schedule Management** — Weekly grid view with shift assignment
-- 📊 **Dashboard** — Real-time stats and quick actions
-- 📱 **Responsive Design** — Desktop (1280px+), Tablet (900px+), Mobile (<900px)
+Web serves interfaces 1 & 3 (role-gated switcher); mobile builds serve interface 2 only.
 
-## Tech Stack
+## Stack
 
-- **Framework**: Flutter 3+ (web, mobile, desktop)
-- **State Management**: Riverpod
-- **HTTP Client**: Dio with JWT interceptor
-- **Routing**: go_router
-- **Storage**: flutter_secure_storage
-- **Design**: Material 3 + Inter font
+- **Flutter** + **RxDart/GetIt** Service–Manager architecture (services = thin never-throw Firestore I/O with cold snapshot streams; managers = `BehaviorSubject` state; plain `StreamBuilder` widgets).
+- **Firebase**: Auth (Google sign-in only, roles via custom claims), **Firestore** (named DB `israel-1`, region `me-west1` — there is *no* `(default)` database), Cloud Functions (`me-west1`, TypeScript), FCM, App Check.
+- **LLM scheduling** (`functions/src/llm/`): provider-agnostic via the AI SDK — switch between Anthropic / Gemini / Grok at runtime through the `config/llm` Firestore doc. Every LLM plan is re-validated by a pure constraint engine (`plan_validator.ts`) with a greedy deterministic fallback.
 
-## Getting Started
-
-### Prerequisites
-
-- Flutter SDK 3.10+
-- Dart SDK 3.0+
-- Backend API running (see [krizot-backend](../krizot-backend))
-
-### Installation
+## Development
 
 ```bash
-# Install dependencies
 flutter pub get
+npm --prefix functions install
 
-# Run on web (development)
-flutter run -d chrome
+# Local loop against emulators (Auth + Firestore + Functions):
+firebase emulators:start
+flutter run -d chrome \
+  --dart-define=USE_FIREBASE_EMULATOR=true \
+  --dart-define=KRIZOT_RECAPTCHA_SITE_KEY=<site-key>
+```
 
-# Run on desktop
-flutter run -d macos  # or windows/linux
+### Tests
 
-# Build for web
+```bash
+flutter analyze && flutter test              # entities + managers (fake_cloud_firestore)
+npm --prefix functions run build             # tsc
+npm --prefix functions test                  # plan_validator + greedy_filler (pure)
+firebase emulators:exec --only firestore \
+  "npm --prefix functions run test:rules"    # security-rules contract
+```
+
+## Deployment
+
+```bash
 flutter build web
+firebase deploy --only firestore,functions,hosting
 ```
 
-### Configuration
+One-time setup (Firebase console / CLI):
 
-The API base URL defaults to `http://localhost:3000/api`. Override via:
+- Blaze plan (required for Cloud Functions).
+- Authentication → enable **Google** provider (email/password is removed).
+- Set `ADMIN_EMAILS` functions param, or promote after the fact: `npx tsx functions/scripts/seed-admin.ts <email>`.
+- LLM key for auto-fill: `firebase functions:secrets:set ANTHROPIC_API_KEY` (or `GOOGLE_GENERATIVE_AI_API_KEY` / `XAI_API_KEY`, matching `config/llm.provider`).
+- Android: add SHA-1/SHA-256 fingerprints for Google sign-in.
+- iOS: upload APNs auth key; enable Push Notifications + Background Modes (remote notifications) in Xcode.
 
-```bash
-# Web
-flutter run -d chrome --dart-define=KRIZOT_API_URL=https://your-api.com/api
+## Roles
 
-# Build
-flutter build web --dart-define=KRIZOT_API_URL=https://your-api.com/api
-```
-
-## Project Structure
-
-```
-lib/
-├── main.dart              # Entry point
-├── app.dart               # Root widget, routing, shell navigation
-├── screens/
-│   ├── login_screen.dart    # Authentication
-│   ├── dashboard_screen.dart # Overview stats
-│   └── stations_screen.dart  # Station CRUD
-├── widgets/
-│   ├── add_edit_station_modal.dart  # Station form modal
-│   ├── station_card.dart            # Mobile card view
-│   ├── status_chip.dart             # Status badge
-│   ├── loading_shimmer.dart         # Loading placeholders
-│   ├── empty_state.dart             # Empty list state
-│   └── error_banner.dart            # Error display
-├── providers/
-│   ├── auth_provider.dart           # Auth state (Riverpod)
-│   └── stations_provider.dart       # Stations state (Riverpod)
-├── services/
-│   ├── api_client.dart              # Dio HTTP client
-│   ├── auth_service.dart            # Login/logout/session
-│   └── stations_service.dart        # Stations CRUD API
-├── models/
-│   ├── user.dart                    # User model
-│   └── station.dart                 # Station model
-└── utils/
-    ├── app_colors.dart              # Color palette
-    ├── app_theme.dart               # Material theme
-    ├── breakpoints.dart             # Responsive breakpoints
-    ├── validators.dart              # Form validators
-    └── constants.dart               # App constants
-```
-
-## Running Tests
-
-```bash
-# Run all tests
-flutter test
-
-# Run with coverage
-flutter test --coverage
-```
-
-## API Integration
-
-The app connects to the Krizot backend REST API:
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/auth/login` | POST | Authenticate user |
-| `/api/auth/logout` | POST | Logout |
-| `/api/auth/me` | GET | Get current user |
-| `/api/stations` | GET | List stations |
-| `/api/stations` | POST | Create station |
-| `/api/stations/:id` | PUT | Update station |
-| `/api/stations/:id` | DELETE | Delete station |
-| `/api/stations/stats` | GET | Station statistics |
-
-## Design System
-
-- **Primary**: Deep Navy `#1A2B4A`
-- **Accent**: Electric Blue `#0D7CFF`
-- **Success**: Teal Green `#00B087`
-- **Warning**: Amber `#FFB020`
-- **Danger**: Red `#E53E3E`
-- **Font**: Inter (400, 500, 600, 700)
+`admin` > `manager` (scheduler, stations, staff) / `dispatcher` (dispatch board) / `employee` (own schedule + acks). The custom claim is authoritative; `users/{uid}.role` mirrors it for UI/queries.
