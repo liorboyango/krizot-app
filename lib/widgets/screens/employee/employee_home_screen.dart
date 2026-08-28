@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../app_config/service_locator.dart';
 import '../../../entities/app_user.dart';
+import '../../../entities/emergency_event.dart';
 import '../../../entities/shift.dart';
+import '../../../managers/dispatch_manager.dart';
 import '../../../managers/shifts_manager.dart';
 import '../../../managers/stations_manager.dart';
 import '../../../managers/user_manager.dart';
@@ -60,6 +62,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              const _EmergencyBanners(),
               if (current != null)
                 _FocusCard(
                   title: 'CURRENT ASSIGNMENT',
@@ -99,6 +102,105 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+/// Red persistent banners for active emergencies alerting this user; each
+/// disappears from "unacked" state once the responder acknowledges.
+class _EmergencyBanners extends StatelessWidget {
+  const _EmergencyBanners();
+
+  @override
+  Widget build(BuildContext context) {
+    final dispatchManager = locator<DispatchManager>();
+    final uid = locator<UserManager>().user?.id;
+    if (uid == null) return const SizedBox.shrink();
+    return StreamBuilder<List<EmergencyEvent>>(
+      initialData: dispatchManager.myAlerts,
+      stream: dispatchManager.myAlertsStream,
+      builder: (context, snapshot) {
+        final alerts = snapshot.data ?? const <EmergencyEvent>[];
+        if (alerts.isEmpty) return const SizedBox.shrink();
+        return Column(
+          children: [
+            for (final event in alerts)
+              _EmergencyBanner(event: event, uid: uid),
+            const SizedBox(height: 12),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _EmergencyBanner extends StatelessWidget {
+  final EmergencyEvent event;
+  final String uid;
+
+  const _EmergencyBanner({required this.event, required this.uid});
+
+  @override
+  Widget build(BuildContext context) {
+    final dispatchManager = locator<DispatchManager>();
+    return StreamBuilder<bool>(
+      stream: dispatchManager.myAckStreamFor(event.id, uid),
+      builder: (context, snapshot) {
+        final acked = snapshot.data ?? false;
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          color: AppColors.danger,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded,
+                    color: Colors.white, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'EMERGENCY: ${event.eventTypeName}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        acked
+                            ? 'Acknowledged — stand by.'
+                            : 'You are needed. Acknowledge now.',
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!acked)
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.danger,
+                    ),
+                    onPressed: () async {
+                      final success = await dispatchManager
+                          .acknowledgeEmergency(event.id, uid);
+                      if (!success && context.mounted) {
+                        SnackBarUtil.showSnackBar(context,
+                            'Failed to acknowledge.', Variant.ERROR);
+                      }
+                    },
+                    child: const Text('ACKNOWLEDGE'),
+                  )
+                else
+                  const Icon(Icons.check_circle, color: Colors.white),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -42,6 +42,16 @@ class DispatchService {
       .snapshots()
       .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
 
+  /// Whether the signed-in responder has acknowledged [eventId] — rules
+  /// allow reading only one's own ack doc.
+  Stream<bool> listenToMyAck(String eventId, String uid) => _firestore
+      .collection(Constants.COLLECTION_EMERGENCY_EVENTS)
+      .doc(eventId)
+      .collection(Constants.COLLECTION_ACKS)
+      .doc(uid)
+      .snapshots()
+      .map((snapshot) => snapshot.exists);
+
   Stream<List<EmergencyAck>> listenToAcks(String eventId) => _firestore
       .collection(Constants.COLLECTION_EMERGENCY_EVENTS)
       .doc(eventId)

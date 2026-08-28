@@ -39,6 +39,10 @@ class DispatchManager {
   Stream<List<EmergencyAck>> acksStreamFor(String eventId) =>
       _dispatchService.listenToAcks(eventId);
 
+  /// Whether the signed-in responder already acknowledged [eventId].
+  Stream<bool> myAckStreamFor(String eventId, String uid) =>
+      _dispatchService.listenToMyAck(eventId, uid);
+
   Future<void> initListeners(AppUser user) async {
     const METHOD = 'initListeners';
     _log.info('$METHOD - START - role: ${user.role.name}');
