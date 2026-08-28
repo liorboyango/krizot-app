@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/station.dart';
+import '../entities/station.dart';
 import '../utils/app_colors.dart';
 
 /// A colored status chip widget for displaying station or shift status.

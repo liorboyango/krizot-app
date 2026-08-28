@@ -1,203 +1,138 @@
-/// User service for the Krizot API.
-///
-/// Handles CRUD operations for users (staff management):
-/// - GET  /api/users          (list)
-/// - GET  /api/users/:id      (single)
-/// - POST /api/users          (create, admin only)
-/// - PUT  /api/users/:id      (update, admin only)
-/// - DELETE /api/users/:id    (delete, admin only)
-library;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:logging/logging.dart';
 
-import 'package:dio/dio.dart';
+import '../app_config/constants.dart';
+import '../app_config/service_locator.dart';
+import '../entities/app_user.dart';
 
-import '../models/user.dart';
-import '../models/api_response.dart';
-import 'api_client.dart';
-
-/// Query parameters for listing users.
-class UserListParams {
-  const UserListParams({
-    this.page = 1,
-    this.limit = 20,
-    this.search,
-    this.role,
-  });
-
-  final int page;
-  final int limit;
-  final String? search;
-  final UserRole? role;
-
-  Map<String, dynamic> toQueryParameters() => {
-        'page': page,
-        'limit': limit,
-        if (search != null && search!.isNotEmpty) 'search': search,
-        if (role != null) 'role': role!.toApiString(),
-      };
-}
-
-/// Payload for creating a new user.
-class CreateUserRequest {
-  const CreateUserRequest({
-    required this.email,
-    required this.password,
-    required this.name,
-    required this.role,
-  });
-
-  final String email;
-  final String password;
-  final String name;
-  final UserRole role;
-
-  Map<String, dynamic> toJson() => {
-        'email': email,
-        'password': password,
-        'name': name,
-        'role': role.toApiString(),
-      };
-}
-
-/// Payload for updating an existing user.
-class UpdateUserRequest {
-  const UpdateUserRequest({
-    this.email,
-    this.name,
-    this.role,
-    this.password,
-  });
-
-  final String? email;
-  final String? name;
-  final UserRole? role;
-  final String? password;
-
-  Map<String, dynamic> toJson() {
-    final map = <String, dynamic>{};
-    if (email != null) map['email'] = email;
-    if (name != null) map['name'] = name;
-    if (role != null) map['role'] = role!.toApiString();
-    if (password != null && password!.isNotEmpty) map['password'] = password;
-    return map;
-  }
-}
-
-/// Service for user/staff management API calls.
+/// Raw Auth + `users` collection I/O. Never throws — logs and returns
+/// null/false so managers decide how to surface failures.
 class UserService {
-  UserService({ApiClient? client})
-      : _client = client ?? ApiClient.instance;
+  final _log = Logger('UserService');
+  final _firestore = locator<FirebaseFirestore>();
+  final _auth = FirebaseAuth.instance;
 
-  final ApiClient _client;
+  bool _googleSignInInitialized = false;
 
-  // ---------------------------------------------------------------------------
-  // List users
-  // ---------------------------------------------------------------------------
+  CollectionReference<AppUser> get _users =>
+      _firestore.collection(Constants.COLLECTION_USERS).withConverter<AppUser>(
+            fromFirestore: (snapshot, _) => AppUser.fromDoc(snapshot),
+            toFirestore: (user, _) => user.toMap(),
+          );
 
-  /// Fetch a paginated list of users.
-  ///
-  /// Throws [ApiException] or [NetworkException] on failure.
-  Future<ApiListResponse<User>> getUsers([
-    UserListParams params = const UserListParams(),
-  ]) async {
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  User? get currentUser => _auth.currentUser;
+
+  /// Google sign-in. Web uses the Firebase popup (no google_sign_in plugin
+  /// involvement); mobile uses google_sign_in 7.x + credential exchange.
+  Future<UserCredential?> signInWithGoogle() async {
+    const METHOD = 'signInWithGoogle';
+    _log.info('$METHOD - START');
     try {
-      final response = await _client.get<Map<String, dynamic>>(
-        '/users',
-        queryParameters: params.toQueryParameters(),
+      if (kIsWeb) {
+        return await _auth.signInWithPopup(GoogleAuthProvider());
+      }
+      final googleSignIn = GoogleSignIn.instance;
+      if (!_googleSignInInitialized) {
+        await googleSignIn.initialize();
+        _googleSignInInitialized = true;
+      }
+      final account = await googleSignIn.authenticate();
+      final credential = GoogleAuthProvider.credential(
+        idToken: account.authentication.idToken,
       );
-
-      final body = response.data!;
-      final dataList = body['data'] as List<dynamic>;
-      final users =
-          dataList.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
-
-      final paginationJson =
-          (body['pagination'] as Map<String, dynamic>?) ??
-              (body['meta'] as Map<String, dynamic>?) ??
-              {'page': 1, 'limit': 20, 'total': users.length, 'totalPages': 1};
-
-      return ApiListResponse(
-        data: users,
-        pagination: Pagination.fromJson(paginationJson),
-        message: body['message'] as String?,
-      );
-    } on DioException catch (e) {
-      throw ApiClient.parseError(e);
+      return await _auth.signInWithCredential(credential);
+    } catch (e) {
+      _log.severe('$METHOD - Error: $e');
+      return null;
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Single user
-  // ---------------------------------------------------------------------------
-
-  /// Fetch a single user by ID.
-  ///
-  /// Throws [ApiException] or [NetworkException] on failure.
-  Future<User> getUser(String id) async {
+  Future<bool> signOut() async {
+    const METHOD = 'signOut';
+    _log.info('$METHOD - START');
     try {
-      final response =
-          await _client.get<Map<String, dynamic>>('/users/$id');
-      final body = response.data!;
-      final data = body['data'] as Map<String, dynamic>;
-      return User.fromJson(data);
-    } on DioException catch (e) {
-      throw ApiClient.parseError(e);
+      if (!kIsWeb && _googleSignInInitialized) {
+        await GoogleSignIn.instance.signOut();
+      }
+      await _auth.signOut();
+      return true;
+    } catch (e) {
+      _log.severe('$METHOD - Error: $e');
+      return false;
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Create user
-  // ---------------------------------------------------------------------------
-
-  /// Create a new user. Requires admin role.
-  ///
-  /// Throws [ApiException] or [NetworkException] on failure.
-  Future<User> createUser(CreateUserRequest request) async {
+  /// The `role` custom claim from the current ID token.
+  /// [forceRefresh] fetches a fresh token (needed after claim changes).
+  Future<String?> getRoleClaim({bool forceRefresh = false}) async {
+    const METHOD = 'getRoleClaim';
     try {
-      final response = await _client.post<Map<String, dynamic>>(
-        '/users',
-        data: request.toJson(),
-      );
-      final body = response.data!;
-      final data = body['data'] as Map<String, dynamic>;
-      return User.fromJson(data);
-    } on DioException catch (e) {
-      throw ApiClient.parseError(e);
+      final result = await _auth.currentUser?.getIdTokenResult(forceRefresh);
+      return result?.claims?['role'] as String?;
+    } catch (e) {
+      _log.severe('$METHOD - Error: $e');
+      return null;
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Update user
-  // ---------------------------------------------------------------------------
+  Stream<AppUser?> listenToUser(String uid) =>
+      _users.doc(uid).snapshots().map((snapshot) => snapshot.data());
 
-  /// Update an existing user. Requires admin role.
-  ///
-  /// Throws [ApiException] or [NetworkException] on failure.
-  Future<User> updateUser(String id, UpdateUserRequest request) async {
+  Stream<List<AppUser>> listenToUsers() => _users
+      .orderBy('displayName')
+      .snapshots()
+      .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+
+  Future<bool> updateStatus(String uid, UserStatus status) async {
+    const METHOD = 'updateStatus';
+    _log.info('$METHOD - START - uid: $uid status: ${status.name}');
     try {
-      final response = await _client.put<Map<String, dynamic>>(
-        '/users/$id',
-        data: request.toJson(),
-      );
-      final body = response.data!;
-      final data = body['data'] as Map<String, dynamic>;
-      return User.fromJson(data);
-    } on DioException catch (e) {
-      throw ApiClient.parseError(e);
+      await _firestore.collection(Constants.COLLECTION_USERS).doc(uid).update({
+        'status': status.name,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      _log.severe('$METHOD - Error: $e');
+      return false;
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Delete user
-  // ---------------------------------------------------------------------------
-
-  /// Delete a user by ID. Requires admin role.
-  ///
-  /// Throws [ApiException] or [NetworkException] on failure.
-  Future<void> deleteUser(String id) async {
+  /// Manager-only (enforced by rules): replace a user's certification tags.
+  Future<bool> updateCertifications(String uid, List<String> certIds) async {
+    const METHOD = 'updateCertifications';
+    _log.info('$METHOD - START - uid: $uid certs: ${certIds.length}');
     try {
-      await _client.delete<dynamic>('/users/$id');
-    } on DioException catch (e) {
-      throw ApiClient.parseError(e);
+      await _firestore.collection(Constants.COLLECTION_USERS).doc(uid).update({
+        'certifications': certIds,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      _log.severe('$METHOD - Error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> addFCMToken(String uid, String token, String platform) async {
+    const METHOD = 'addFCMToken';
+    _log.info('$METHOD - START');
+    try {
+      await _firestore.collection(Constants.COLLECTION_USERS).doc(uid).update({
+        'fcmTokens.$token': {
+          'platform': platform,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+      });
+      return true;
+    } catch (e) {
+      _log.severe('$METHOD - Error: $e');
+      return false;
     }
   }
 }

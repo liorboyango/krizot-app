@@ -1,0 +1,45 @@
+## Mobile & web app called Krizot.
+
+# Interface 1: The Administrative Scheduler (Desktop Optimized, Mobile Functional)
+Target User: Shift Managers / Operations Officers.
+Key Features:
+
+Dynamic Station Management: Ability to define "Stations." Some stations require 24/7 manning (e.g., Station B), while others are "On-Demand" based on daily needs (e.g., Station A is only active from 08:00-10:00).
+
+Shift Flexibility: Default shifts are 2-hour blocks, but must be fully editable in length.
+
+Certification-Based Logic: A database of users, each tagged with specific certifications/skills. The system must only allow "User X" to be assigned to "Station Y" if they hold the required certification.
+
+AI-Powered Scheduling: * An "Auto-Fill" feature that populates the daily schedule based on user availability and certifications.
+
+"Smart Healing" Logic: If a user is marked as "Sick" or "Unavailable," the AI suggests the best replacement who shares the same certifications without creating overtime conflicts.
+
+Responsive UI: Primary use on Desktop for complex drag-and-drop actions, but must remain fully functional for mobile browsers.
+
+# Interface 2: The User Mobile Interface
+Target User: Employees / Field Personnel.
+Key Features:
+
+Personal Dashboard: A clear view of the Daily and Weekly schedule.
+
+Focus View: Large, prominent display of the "Current Assignment" and "Upcoming Assignment" (Location, Time, and Station).
+
+Acknowledgement Loop: When a manager changes a user’s schedule, the user receives a push notification. The user must click an "Acknowledge" button. The Scheduler (Interface 1) must show a visual indicator (e.g., a green checkmark) once the user has seen and confirmed the change.
+
+# Interface 3: Emergency Dispatch (The Trigger Interface)
+Target User: Dispatchers / Command Staff.
+Key Features:
+
+Event-Based Activation: A simplified interface to trigger emergency call-outs.
+
+Logic-Driven Alerts: If "Event Type C" occurs, the system automatically alerts all users classified as "Type C Responders."
+
+Customizable Scenarios: The ability to pre-define various event types and which personnel/stations are tied to each event.
+
+Speed & Simplicity: Minimal clicks required to initiate a high-priority alert.
+
+# Tech:
+Backend: node.js (Cloud Functions) with Firebase Firestore as database.
+For users sign-in, use Firebase Google Auth.
+Use Flutter for the mobile app & frontend of the Web interfaces 1 & 3.  Allow switching between Interface 1 & 3 when in Web, and allow only interface 2 in Mobile.
+State management - use RxDart + GetIt; Service + Manager using streams, singletons via GetIt. See ~/Documents/gitProjects/sentry_modder for reference.

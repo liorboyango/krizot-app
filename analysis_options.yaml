@@ -2,15 +2,18 @@ include: package:flutter_lints/flutter.yaml
 
 linter:
   rules:
-    - always_declare_return_types
-    - avoid_print
-    - avoid_unnecessary_containers
-    - prefer_const_constructors
-    - prefer_const_declarations
-    - prefer_final_fields
-    - prefer_single_quotes
-    - sort_child_properties_last
-    - use_key_in_widget_constructors
+    # Project convention (see sentry_modder reference): SCREAMING_CASE for
+    # const METHOD/ROUTE_PATH/KEY_* identifiers.
+    constant_identifier_names: false
+    always_declare_return_types: true
+    avoid_print: true
+    avoid_unnecessary_containers: true
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_final_fields: true
+    prefer_single_quotes: true
+    sort_child_properties_last: true
+    use_key_in_widget_constructors: true
 
 analyzer:
   errors:

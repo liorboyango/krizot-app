@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>727048337784-hh74j03mb7mhsmthgrdpqs1g08r1ct3m.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.727048337784-hh74j03mb7mhsmthgrdpqs1g08r1ct3m</string>
+	<key>API_KEY</key>
+	<string>AIzaSyDirykqN1YqIfuE1wM-Ch5DDUx3E1kKkRo</string>
+	<key>GCM_SENDER_ID</key>
+	<string>727048337784</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.master1590.krizot</string>
+	<key>PROJECT_ID</key>
+	<string>krizot-66232</string>
+	<key>STORAGE_BUCKET</key>
+	<string>krizot-66232.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:727048337784:ios:3ee9ad78861280fa9db08d</string>
+</dict>
+</plist>
