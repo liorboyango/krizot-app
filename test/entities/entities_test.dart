@@ -45,24 +45,24 @@ void main() {
 
   group('Station', () {
     test('round-trips 24x7 wire value and windows', () {
-      final station = Station(
+      const station = Station(
         id: 's1',
         name: 'Station B',
         location: 'North gate',
         manningType: ManningType.aroundTheClock,
-        requiredCertifications: const ['certGuard'],
+        requiredCertifications: ['certGuard'],
       );
       expect(station.toMap()['manningType'], '24x7');
       final restored = Station.fromMap('s1', station.toMap());
       expect(restored.manningType, ManningType.aroundTheClock);
       expect(restored.isAroundTheClock, isTrue);
 
-      final onDemand = Station(
+      const onDemand = Station(
         id: 's2',
         name: 'Station A',
         location: 'East',
         manningType: ManningType.onDemand,
-        activeWindows: const [TimeWindow(start: '08:00', end: '10:00')],
+        activeWindows: [TimeWindow(start: '08:00', end: '10:00')],
       );
       final restored2 = Station.fromMap('s2', onDemand.toMap());
       expect(restored2.manningType, ManningType.onDemand);
@@ -121,11 +121,11 @@ void main() {
 
   group('EventType / EmergencyEvent', () {
     test('EventType round-trips', () {
-      final type = EventType(
+      const type = EventType(
         id: 'e1',
         name: 'Event Type C',
-        responderCertifications: const ['certC'],
-        stationIds: const ['s1'],
+        responderCertifications: ['certC'],
+        stationIds: ['s1'],
         priority: EventPriority.critical,
         active: false,
       );
@@ -136,13 +136,13 @@ void main() {
     });
 
     test('EmergencyEvent round-trips alerted users', () {
-      final event = EmergencyEvent(
+      const event = EmergencyEvent(
         id: 'ev1',
         eventTypeId: 'e1',
         eventTypeName: 'Event Type C',
         triggeredBy: 'dispatcher1',
-        alertedUserIds: const ['u1', 'u2'],
-        alertedUsers: const [
+        alertedUserIds: ['u1', 'u2'],
+        alertedUsers: [
           AlertedUser(uid: 'u1', displayName: 'Dana'),
           AlertedUser(uid: 'u2', displayName: 'Noa'),
         ],
