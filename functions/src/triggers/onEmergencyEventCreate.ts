@@ -3,6 +3,7 @@
  * high-priority notification to every alerted responder.
  */
 
+import { FieldPath } from 'firebase-admin/firestore';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import * as logger from 'firebase-functions/logger';
 
@@ -39,7 +40,7 @@ export const onEmergencyEventCreate = onDocumentCreated(
       const chunk = alertedUserIds.slice(offset, offset + FIRESTORE_IN_LIMIT);
       const snapshot = await db
         .collection(COLLECTION_USERS)
-        .where('__name__', 'in', chunk)
+        .where(FieldPath.documentId(), 'in', chunk)
         .get();
       for (const doc of snapshot.docs) {
         users.push({
