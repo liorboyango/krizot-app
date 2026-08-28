@@ -2,3 +2,5 @@ node_modules/
 lib/
 *.log
 .env*
+.secret.local
+service-account*.json
