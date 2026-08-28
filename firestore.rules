@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function role() {
+      return request.auth.token.role;
+    }
+    function isAdmin() {
+      return signedIn() && role() == 'admin';
+    }
+    function isManager() {
+      return signedIn() && role() in ['manager', 'admin'];
+    }
+    function isDispatcher() {
+      return signedIn() && role() in ['dispatcher', 'admin'];
+    }
+    function onlyKeys(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(keys);
+    }
+
+    match /users/{uid} {
+      allow read: if isManager() || (signedIn() && request.auth.uid == uid);
+      // Docs are created/deleted by Cloud Functions (Admin SDK bypasses rules).
+      allow create, delete: if false;
+      // Self-service mask deliberately excludes 'role' and 'certifications'.
+      allow update: if isManager()
+          || (signedIn()
+              && request.auth.uid == uid
+              && onlyKeys(['fcmTokens', 'status', 'displayName', 'photoUrl',
+                           'updatedAt']));
+    }
+
+    match /certifications/{certId} {
+      allow read: if signedIn();
+      allow write: if isManager();
+    }
+
+    match /stations/{stationId} {
+      allow read: if signedIn();
+      allow write: if isManager();
+    }
+
+    match /shifts/{shiftId} {
+      allow read: if isManager()
+          || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create, delete: if isManager();
+      // Assignee may only acknowledge — strict field mask.
+      allow update: if isManager()
+          || (signedIn()
+              && resource.data.userId == request.auth.uid
+              && onlyKeys(['acknowledged', 'ackAt'])
+              && request.resource.data.acknowledged == true);
+    }
+
+    match /eventTypes/{eventTypeId} {
+      allow read: if isDispatcher() || isManager();
+      allow write: if isManager();
+    }
+
+    match /emergencyEvents/{eventId} {
+      allow read: if isDispatcher() || isManager()
+          || (signedIn() && request.auth.uid in resource.data.alertedUserIds);
+      // Created only by the triggerEmergency callable.
+      allow create: if false;
+      allow update: if isDispatcher()
+          && onlyKeys(['status', 'resolvedBy', 'resolvedAt']);
+      allow delete: if false;
+
+      match /acks/{ackUid} {
+        allow read: if isDispatcher() || isManager()
+            || (signedIn() && request.auth.uid == ackUid);
+        allow create: if signedIn()
+            && request.auth.uid == ackUid
+            && request.auth.uid in get(/databases/$(database)/documents/emergencyEvents/$(eventId)).data.alertedUserIds;
+        allow update, delete: if false;
+      }
+    }
+
+    match /config/{doc} {
+      allow read: if isManager();
+      allow write: if isAdmin();
+    }
+  }
+}

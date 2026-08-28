@@ -1,1 +1,67 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"krizot-66232","appId":"1:727048337784:android:3ab62a4a0527ae089db08d","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"krizot-66232","appId":"1:727048337784:ios:3ee9ad78861280fa9db08d","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"macos":{"default":{"projectId":"krizot-66232","appId":"1:727048337784:ios:3ee9ad78861280fa9db08d","uploadDebugSymbols":false,"fileOutput":"macos/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"krizot-66232","configurations":{"android":"1:727048337784:android:3ab62a4a0527ae089db08d","ios":"1:727048337784:ios:3ee9ad78861280fa9db08d","macos":"1:727048337784:ios:3ee9ad78861280fa9db08d","web":"1:727048337784:web:7253ae517dbcfe0d9db08d","windows":"1:727048337784:web:67a334bc3f0cda029db08d"}}}}}}
+{
+  "firestore": {
+    "database": "israel-1",
+    "location": "me-west1",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "runtime": "nodejs22",
+      "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
+    }
+  ],
+  "hosting": {
+    "public": "build/web",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+  },
+  "emulators": {
+    "auth": { "port": 9099 },
+    "firestore": { "port": 8080 },
+    "functions": { "port": 5001 },
+    "ui": { "enabled": true },
+    "singleProjectMode": true
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "krizot-66232",
+          "appId": "1:727048337784:android:3ab62a4a0527ae089db08d",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "krizot-66232",
+          "appId": "1:727048337784:ios:3ee9ad78861280fa9db08d",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "krizot-66232",
+          "appId": "1:727048337784:ios:3ee9ad78861280fa9db08d",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "krizot-66232",
+          "configurations": {
+            "android": "1:727048337784:android:3ab62a4a0527ae089db08d",
+            "ios": "1:727048337784:ios:3ee9ad78861280fa9db08d",
+            "macos": "1:727048337784:ios:3ee9ad78861280fa9db08d",
+            "web": "1:727048337784:web:7253ae517dbcfe0d9db08d",
+            "windows": "1:727048337784:web:67a334bc3f0cda029db08d"
+          }
+        }
+      }
+    }
+  }
+}
