@@ -171,7 +171,11 @@ void main() {
       name: 'Gate',
       requiredCertifications: ['certGuard'],
     );
-    final now = DateTime.now();
+    // Mid-week anchor — hour offsets from a real `now` cross the week
+    // boundary when the suite runs near it, and the week listeners below
+    // would never see the seeded docs.
+    final now = TimeUtil.startOfWeek(DateTime.now())
+        .add(const Duration(days: 2, hours: 12));
     final shift = Shift(
       id: 'x',
       stationId: station.id,
@@ -218,7 +222,9 @@ void main() {
       name: 'Gate',
       requiredCertifications: ['certGuard'],
     );
-    final now = DateTime.now();
+    // Mid-week anchor — see the availability-calendar test above.
+    final now = TimeUtil.startOfWeek(DateTime.now())
+        .add(const Duration(days: 2, hours: 12));
     final shift = Shift(
       id: 'x',
       stationId: station.id,

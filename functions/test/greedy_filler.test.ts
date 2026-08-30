@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { fillGreedy } from '../src/domain/greedy_filler';
-import { validatePlan } from '../src/domain/plan_validator';
-import { PlanningContext, ShiftRecord, UserRecord } from '../src/domain/types';
+import { fillGreedy, fillTrainingGreedy } from '../src/domain/greedy_filler';
+import { validatePlan, validateTraineePlan } from '../src/domain/plan_validator';
+import {
+  PlanningContext,
+  ShiftRecord,
+  TrainingRecord,
+  UserRecord,
+} from '../src/domain/types';
 
 const HOUR = 3_600_000;
 const T0 = Date.parse('2026-09-01T08:00:00Z');
@@ -80,5 +85,75 @@ describe('fillGreedy', () => {
     ]);
     // Specialist is busy at the gate → medbay has no legal candidate.
     expect(plan).toEqual([]);
+  });
+});
+
+function training(
+  id: string,
+  startHour: number,
+  endHour: number,
+  overrides: Partial<TrainingRecord> = {},
+): TrainingRecord {
+  return {
+    id,
+    certificationId: 'certMedic',
+    type: 'tutoring',
+    priority: 0,
+    traineeId: null,
+    trainerIds: ['specialist'],
+    startMs: T0 + startHour * HOUR,
+    endMs: T0 + endHour * HOUR,
+    ...overrides,
+  };
+}
+
+describe('fillTrainingGreedy', () => {
+  it('gives the scarce candidate to the higher-priority session', () => {
+    // Two concurrent sessions, one uncertified candidate — priority decides.
+    const trainingCtx: PlanningContext = {
+      ...ctx,
+      shifts: [],
+      trainingSessions: [
+        training('lowPrio', 0, 2, { priority: 1 }),
+        training('highPrio', 0, 2, { priority: 5 }),
+      ],
+    };
+    const plan = fillTrainingGreedy(trainingCtx);
+    expect(plan).toEqual([
+      {
+        sessionId: 'highPrio',
+        userId: 'generalist',
+        reason: expect.stringContaining('greedy'),
+      },
+    ]);
+  });
+
+  it('produces only validator-legal trainee assignments', () => {
+    const trainingCtx: PlanningContext = {
+      ...ctx,
+      trainingSessions: [training('tr1', 4, 6), training('tr2', 6, 8)],
+    };
+    const plan = fillTrainingGreedy(trainingCtx);
+    expect(plan).toHaveLength(2);
+    const { violations } = validateTraineePlan(plan, trainingCtx);
+    expect(violations).toEqual([]);
+  });
+
+  it('skips sessions whose slot the LLM already filled and respects shift plans', () => {
+    const trainingCtx: PlanningContext = {
+      ...ctx,
+      trainingSessions: [training('tr1', 0, 2)],
+    };
+    expect(
+      fillTrainingGreedy(trainingCtx, [
+        { sessionId: 'tr1', userId: 'generalist' },
+      ]),
+    ).toEqual([]);
+    // The only candidate is on a same-plan overlapping shift → unfillable.
+    expect(
+      fillTrainingGreedy(trainingCtx, [], [
+        { shiftId: 'gateShift', userId: 'generalist' },
+      ]),
+    ).toEqual([]);
   });
 });

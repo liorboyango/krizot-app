@@ -8,6 +8,7 @@ import {
   Assignment,
   PlanningContext,
   ShiftRecord,
+  TraineeAssignment,
   UserRecord,
 } from './types';
 
@@ -19,6 +20,16 @@ export interface Violation {
 export interface ValidationResult {
   valid: Assignment[];
   violations: Violation[];
+}
+
+export interface TraineeViolation {
+  assignment: TraineeAssignment;
+  reason: string;
+}
+
+export interface TraineeValidationResult {
+  valid: TraineeAssignment[];
+  violations: TraineeViolation[];
 }
 
 function overlaps(aStartMs: number, aEndMs: number, shift: ShiftRecord): boolean {
@@ -148,4 +159,143 @@ export function eligibleUsers(
         accepted,
       ) === null,
   );
+}
+
+/**
+ * Checks one trainee proposal against the context, the already-accepted
+ * trainee assignments of the plan, and any shift assignments the plan has
+ * already claimed. Returns a violation reason, or null if valid.
+ */
+export function checkTraineeAssignment(
+  assignment: TraineeAssignment,
+  context: PlanningContext,
+  accepted: TraineeAssignment[],
+  acceptedShifts: Assignment[] = [],
+): string | null {
+  const session = (context.trainingSessions ?? []).find(
+    (t) => t.id === assignment.sessionId,
+  );
+  if (!session) return `session ${assignment.sessionId} does not exist`;
+  if (session.traineeId !== null) {
+    return `session ${session.id} already has a trainee`;
+  }
+  if (accepted.some((a) => a.sessionId === session.id)) {
+    return `session ${session.id} was already filled by this plan`;
+  }
+
+  const user = context.users.find((u) => u.id === assignment.userId);
+  if (!user) return `user ${assignment.userId} does not exist`;
+  if (user.status !== 'available') return `user ${user.id} is ${user.status}`;
+  if (session.trainerIds.includes(user.id)) {
+    return `user ${user.id} is a trainer of session ${session.id}`;
+  }
+  // Training exists to close a gap — holders don't need it.
+  if (user.certifications.includes(session.certificationId)) {
+    return (
+      `user ${user.id} already holds certification ` +
+      `${session.certificationId}`
+    );
+  }
+
+  const windows = (context.availability ?? []).filter(
+    (w) => w.userId === user.id,
+  );
+  if (
+    windows.length > 0 &&
+    !windows.some(
+      (w) => w.startMs <= session.startMs && w.endMs >= session.endMs,
+    )
+  ) {
+    return `user ${user.id} is not on-site for the whole session`;
+  }
+
+  const shiftConflict = context.shifts.find(
+    (s) =>
+      (s.userId === user.id ||
+        acceptedShifts.some((a) => a.shiftId === s.id && a.userId === user.id)) &&
+      s.startMs < session.endMs &&
+      session.startMs < s.endMs,
+  );
+  if (shiftConflict) {
+    return `user ${user.id} has overlapping shift ${shiftConflict.id}`;
+  }
+
+  const sessionConflict = (context.trainingSessions ?? []).find(
+    (t) =>
+      t.id !== session.id &&
+      (t.traineeId === user.id ||
+        t.trainerIds.includes(user.id) ||
+        accepted.some((a) => a.sessionId === t.id && a.userId === user.id)) &&
+      t.startMs < session.endMs &&
+      session.startMs < t.endMs,
+  );
+  if (sessionConflict) {
+    return `user ${user.id} is in overlapping session ${sessionConflict.id}`;
+  }
+
+  return null;
+}
+
+/** Splits a proposed trainee plan into valid assignments and violations. */
+export function validateTraineePlan(
+  assignments: TraineeAssignment[],
+  context: PlanningContext,
+  acceptedShifts: Assignment[] = [],
+): TraineeValidationResult {
+  const valid: TraineeAssignment[] = [];
+  const violations: TraineeViolation[] = [];
+  for (const assignment of assignments) {
+    const reason = checkTraineeAssignment(
+      assignment,
+      context,
+      valid,
+      acceptedShifts,
+    );
+    if (reason === null) {
+      valid.push(assignment);
+    } else {
+      violations.push({ assignment, reason });
+    }
+  }
+  return { valid, violations };
+}
+
+/** All users who could legally be the trainee of session [sessionId]. */
+export function eligibleTrainees(
+  sessionId: string,
+  context: PlanningContext,
+  accepted: TraineeAssignment[] = [],
+  acceptedShifts: Assignment[] = [],
+): UserRecord[] {
+  return context.users.filter(
+    (user) =>
+      checkTraineeAssignment(
+        { sessionId, userId: user.id },
+        context,
+        accepted,
+        acceptedShifts,
+      ) === null,
+  );
+}
+
+/**
+ * The context with accepted trainee assignments materialized onto their
+ * sessions — shift validation then sees those users as busy participants.
+ */
+export function withTrainees(
+  context: PlanningContext,
+  accepted: TraineeAssignment[],
+): PlanningContext {
+  if (accepted.length === 0) return context;
+  const traineeBySession = new Map(
+    accepted.map((a) => [a.sessionId, a.userId]),
+  );
+  return {
+    ...context,
+    trainingSessions: (context.trainingSessions ?? []).map((session) =>
+      traineeBySession.has(session.id)
+        ? { ...session, traineeId: traineeBySession.get(session.id)! }
+        : session,
+    ),
+  };
 }

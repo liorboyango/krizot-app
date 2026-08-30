@@ -11,6 +11,7 @@ import '../../org_filter_panel.dart';
 import '../dispatch/dispatch_screen.dart';
 import 'scheduler_screen.dart';
 import 'stations_screen.dart';
+import 'statistics_screen.dart';
 import 'users_screen.dart';
 
 /// Web chrome for Interfaces 1 & 3: a NavigationRail (wide) or bottom bar
@@ -39,6 +40,12 @@ class WebShell extends StatelessWidget {
       path: UsersScreen.ROUTE_PATH,
       label: l10n.navStaff,
       icon: Icons.people_outline,
+      managerOnly: true,
+    ),
+    (
+      path: StatisticsScreen.ROUTE_PATH,
+      label: l10n.navStatistics,
+      icon: Icons.insights_outlined,
       managerOnly: true,
     ),
     (

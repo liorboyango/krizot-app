@@ -7,6 +7,7 @@ class TimeUtil {
   static final DateFormat _dayKeyFormat = DateFormat('yyyy-MM-dd');
   static final DateFormat _timeFormat = DateFormat('HH:mm');
   static final DateFormat _dayLabelFormat = DateFormat('EEE d MMM');
+  static final DateFormat _monthLabelFormat = DateFormat('MMMM yyyy');
 
   /// 'YYYY-MM-DD' key of [date] in local time — matches `shifts.dayKey`.
   static String dayKey(DateTime date) => _dayKeyFormat.format(date);
@@ -27,6 +28,13 @@ class TimeUtil {
     final day = startOfDay(date);
     return day.subtract(Duration(days: day.weekday - DateTime.monday));
   }
+
+  /// Midnight (local) of the first day of [date]'s month.
+  static DateTime startOfMonth(DateTime date) =>
+      DateTime(date.year, date.month);
+
+  static String formatMonthLabel(DateTime date) =>
+      _monthLabelFormat.format(date);
 
   /// The seven days of the week containing [date], starting Monday.
   static List<DateTime> weekDays(DateTime date) {

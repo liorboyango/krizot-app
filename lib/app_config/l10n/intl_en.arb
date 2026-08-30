@@ -18,6 +18,7 @@
   "navScheduler": "Scheduler",
   "navStations": "Stations",
   "navStaff": "Staff",
+  "navStatistics": "Statistics",
   "navDispatch": "Dispatch",
 
   "schedulerTitle": "Scheduler",
@@ -54,7 +55,7 @@
   "deleteShift": "Delete shift",
 
   "aiAutoFillTitle": "AI Auto-Fill",
-  "autoFillExplainer": "Creates the day's missing shifts, then fills all open shifts on {date} using staff availability and certifications.",
+  "autoFillExplainer": "Creates the day's missing shifts, then fills all open shifts and open training slots on {date} using staff availability, certifications and training priorities.",
   "@autoFillExplainer": {
     "placeholders": {
       "date": {
@@ -85,6 +86,14 @@
   "runAutoFill": "Run Auto-Fill",
   "createdShiftsNote": "{count, plural, =1{Created 1 missing shift} other{Created {count} missing shifts}}",
   "@createdShiftsNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filledTrainingSlots": "{count, plural, =0{Filled no training slots} =1{Filled 1 training slot} other{Filled {count} training slots}}",
+  "@filledTrainingSlots": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -454,6 +463,62 @@
   "stationsInvolved": "Stations involved",
   "eventTypeActive": "Active",
   "inactiveHiddenFromBoard": "Inactive scenarios are hidden from the dispatch board",
+
+  "statisticsTitle": "Statistics",
+  "statWeeklyStationHours": "Station hours this week",
+  "statActiveStaffWeek": "Staff assigned this week",
+  "statTrainingHoursMonth": "Training hours this month",
+  "statOpenTrainingSlotsMonth": "Open training slots this month",
+  "weeklyStationTimeTitle": "Station time per user",
+  "monthlyTrainingTitle": "Monthly training",
+  "availabilityReportTitle": "Availability report",
+  "previousMonth": "Previous month",
+  "nextMonth": "Next month",
+  "hoursValue": "{hours}h",
+  "@hoursValue": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "shiftsTally": "{count, plural, =1{1 shift} other{{count} shifts}}",
+  "@shiftsTally": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionsTally": "{count, plural, =1{1 session} other{{count} sessions}}",
+  "@sessionsTally": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "traineesAssignedTally": "{filled}/{total} trainees assigned",
+  "@traineesAssignedTally": {
+    "placeholders": {
+      "filled": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "alwaysPresent": "Always present",
+  "presenceWindowsTally": "{count, plural, =1{1 window} other{{count} windows}}",
+  "@presenceWindowsTally": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noDataForPeriod": "No data for this period.",
 
   "hiUser": "Hi, {name}",
   "@hiUser": {

@@ -145,6 +145,9 @@ export async function loadTrainingForDay(
     const data = doc.data();
     return {
       id: doc.id,
+      certificationId: (data.certificationId as string) ?? '',
+      type: (data.type as TrainingRecord['type']) ?? 'tutoring',
+      priority: (data.priority as number) ?? 0,
       traineeId: (data.traineeId as string | null) ?? null,
       trainerIds: (data.trainerIds as string[]) ?? [],
       startMs: data.start?.toMillis?.() ?? 0,

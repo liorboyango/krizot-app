@@ -65,13 +65,28 @@ export interface AvailabilityRecord {
   endMs: number;
 }
 
-/** A training session blocking its participants for its duration. */
+/**
+ * A training session blocking its participants for its duration. A null
+ * traineeId is an open slot the planner may fill with an uncertified user.
+ */
 export interface TrainingRecord {
   id: string;
+  /** The certification the session trains toward. */
+  certificationId: string;
+  type: 'simulation' | 'spectation' | 'tutoring';
+  /** Higher = more important to fill (defaults to the cert's level). */
+  priority: number;
   traineeId: string | null;
   trainerIds: string[];
   startMs: number;
   endMs: number;
+}
+
+/** A proposed trainee for an open training session. */
+export interface TraineeAssignment {
+  sessionId: string;
+  userId: string;
+  reason?: string;
 }
 
 export interface PlanningContext {

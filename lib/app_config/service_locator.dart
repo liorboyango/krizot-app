@@ -10,6 +10,7 @@ import '../managers/notifications_manager.dart';
 import '../managers/org_filter_manager.dart';
 import '../managers/shifts_manager.dart';
 import '../managers/stations_manager.dart';
+import '../managers/statistics_manager.dart';
 import '../managers/training_manager.dart';
 import '../managers/user_manager.dart';
 import '../services/availability_service.dart';
@@ -83,6 +84,12 @@ Future<void> initSingletons({
   locator.registerSingleton<TrainingService>(TrainingService());
   locator.registerSingleton<TrainingManager>(
     TrainingManager(),
+    dispose: (manager) => manager.dispose(),
+  );
+
+  /// Statistics (reporting over shifts + training + availability)
+  locator.registerSingleton<StatisticsManager>(
+    StatisticsManager(),
     dispose: (manager) => manager.dispose(),
   );
 

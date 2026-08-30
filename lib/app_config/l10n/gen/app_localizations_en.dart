@@ -58,6 +58,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navStaff => 'Staff';
 
   @override
+  String get navStatistics => 'Statistics';
+
+  @override
   String get navDispatch => 'Dispatch';
 
   @override
@@ -143,7 +146,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String autoFillExplainer(String date) {
-    return 'Creates the day\'s missing shifts, then fills all open shifts on $date using staff availability and certifications.';
+    return 'Creates the day\'s missing shifts, then fills all open shifts and open training slots on $date using staff availability, certifications and training priorities.';
   }
 
   @override
@@ -186,6 +189,18 @@ class AppLocalizationsEn extends AppLocalizations {
       locale: localeName,
       other: 'Created $count missing shifts',
       one: 'Created 1 missing shift',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String filledTrainingSlots(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Filled $count training slots',
+      one: 'Filled 1 training slot',
+      zero: 'Filled no training slots',
     );
     return '$_temp0';
   }
@@ -781,6 +796,85 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get inactiveHiddenFromBoard =>
       'Inactive scenarios are hidden from the dispatch board';
+
+  @override
+  String get statisticsTitle => 'Statistics';
+
+  @override
+  String get statWeeklyStationHours => 'Station hours this week';
+
+  @override
+  String get statActiveStaffWeek => 'Staff assigned this week';
+
+  @override
+  String get statTrainingHoursMonth => 'Training hours this month';
+
+  @override
+  String get statOpenTrainingSlotsMonth => 'Open training slots this month';
+
+  @override
+  String get weeklyStationTimeTitle => 'Station time per user';
+
+  @override
+  String get monthlyTrainingTitle => 'Monthly training';
+
+  @override
+  String get availabilityReportTitle => 'Availability report';
+
+  @override
+  String get previousMonth => 'Previous month';
+
+  @override
+  String get nextMonth => 'Next month';
+
+  @override
+  String hoursValue(String hours) {
+    return '${hours}h';
+  }
+
+  @override
+  String shiftsTally(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count shifts',
+      one: '1 shift',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String sessionsTally(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sessions',
+      one: '1 session',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String traineesAssignedTally(int filled, int total) {
+    return '$filled/$total trainees assigned';
+  }
+
+  @override
+  String get alwaysPresent => 'Always present';
+
+  @override
+  String presenceWindowsTally(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count windows',
+      one: '1 window',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get noDataForPeriod => 'No data for this period.';
 
   @override
   String hiUser(String name) {

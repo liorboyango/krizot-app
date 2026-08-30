@@ -8,6 +8,7 @@ import '../entities/go_router_refresh_stream.dart';
 import '../managers/user_manager.dart';
 import '../widgets/screens/admin/scheduler_screen.dart';
 import '../widgets/screens/admin/stations_screen.dart';
+import '../widgets/screens/admin/statistics_screen.dart';
 import '../widgets/screens/admin/users_screen.dart';
 import '../widgets/screens/admin/web_shell.dart';
 import '../widgets/screens/dispatch/dispatch_screen.dart';
@@ -27,6 +28,7 @@ class RouteGenerator {
     SchedulerScreen.ROUTE_PATH,
     StationsScreen.ROUTE_PATH,
     UsersScreen.ROUTE_PATH,
+    StatisticsScreen.ROUTE_PATH,
     DispatchScreen.ROUTE_PATH,
   ];
 
@@ -73,6 +75,11 @@ class RouteGenerator {
               path: UsersScreen.ROUTE_PATH,
               name: UsersScreen.ROUTE_NAME,
               builder: (context, state) => const UsersScreen(),
+            ),
+            GoRoute(
+              path: StatisticsScreen.ROUTE_PATH,
+              name: StatisticsScreen.ROUTE_NAME,
+              builder: (context, state) => const StatisticsScreen(),
             ),
             GoRoute(
               path: DispatchScreen.ROUTE_PATH,

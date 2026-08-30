@@ -9,6 +9,18 @@ export const AutoFillPlanSchema = z.object({
       reason: z.string().describe('One short sentence for the manager'),
     }),
   ),
+  traineeAssignments: z
+    .array(
+      z.object({
+        sessionId: z.string(),
+        userId: z.string(),
+        reason: z.string().describe('One short sentence for the manager'),
+      }),
+    )
+    .describe(
+      'Trainees for open training sessions (traineeId null in context); ' +
+        'empty when none can be filled',
+    ),
   notes: z
     .string()
     .describe('Overall remarks: unfillable shifts, fairness trade-offs'),

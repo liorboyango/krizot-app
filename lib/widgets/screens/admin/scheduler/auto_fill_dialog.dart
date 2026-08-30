@@ -8,8 +8,9 @@ import '../../../../utils/time_util.dart';
 
 /// Runs the AI Auto-Fill callable for one day and shows the outcome —
 /// the backend first creates every still-missing shift of the day, then
-/// assigns staff. An optional free-text prompt is forwarded to the LLM as
-/// manager guidance.
+/// assigns staff to open shifts and trainees to open training slots
+/// (higher-priority sessions first). An optional free-text prompt is
+/// forwarded to the LLM as manager guidance.
 class AutoFillDialog extends StatefulWidget {
   final DateTime day;
 
@@ -61,6 +62,9 @@ class _AutoFillDialogState extends State<AutoFillDialog> {
     final l10n = AppLocalizations.of(context)!;
     final unfilled = (result?['unfilled'] as List?) ?? const [];
     final createdCount = (result?['created'] as num?)?.toInt() ?? 0;
+    final trainingFilled = (result?['trainingFilled'] as num?)?.toInt() ?? 0;
+    final trainingUnfilled =
+        (result?['trainingUnfilled'] as List?) ?? const [];
     return AlertDialog(
       title: Text(l10n.aiAutoFillTitle),
       content: SizedBox(
@@ -123,6 +127,12 @@ class _AutoFillDialogState extends State<AutoFillDialog> {
                             (unfilled.isEmpty
                                 ? ''
                                 : l10n.leftOpen(unfilled.length)),
+                        // Only mention training on days that had open slots.
+                        if (trainingFilled > 0 || trainingUnfilled.isNotEmpty)
+                          l10n.filledTrainingSlots(trainingFilled) +
+                              (trainingUnfilled.isEmpty
+                                  ? ''
+                                  : l10n.leftOpen(trainingUnfilled.length)),
                       ].join(' · '),
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),

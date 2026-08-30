@@ -58,6 +58,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get navStaff => 'צוות';
 
   @override
+  String get navStatistics => 'סטטיסטיקה';
+
+  @override
   String get navDispatch => 'מוקד חירום';
 
   @override
@@ -142,7 +145,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String autoFillExplainer(String date) {
-    return 'יצירת המשמרות החסרות של היום, ואז מילוי כל המשמרות הפנויות ב$date לפי זמינות והסמכות הצוות.';
+    return 'יצירת המשמרות החסרות של היום, ואז מילוי כל המשמרות הפנויות ומשבצות האימון הפתוחות ב$date לפי זמינות, הסמכות ועדיפויות האימון.';
   }
 
   @override
@@ -185,6 +188,18 @@ class AppLocalizationsHe extends AppLocalizations {
       locale: localeName,
       other: 'נוצרו $count משמרות חסרות',
       one: 'נוצרה משמרת חסרה אחת',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String filledTrainingSlots(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'מולאו $count משבצות אימון',
+      one: 'מולאה משבצת אימון אחת',
+      zero: 'לא מולאו משבצות אימון',
     );
     return '$_temp0';
   }
@@ -772,6 +787,85 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get inactiveHiddenFromBoard => 'תרחישים לא פעילים מוסתרים מלוח המוקד';
+
+  @override
+  String get statisticsTitle => 'סטטיסטיקה';
+
+  @override
+  String get statWeeklyStationHours => 'שעות עמדה השבוע';
+
+  @override
+  String get statActiveStaffWeek => 'משובצים השבוע';
+
+  @override
+  String get statTrainingHoursMonth => 'שעות אימון החודש';
+
+  @override
+  String get statOpenTrainingSlotsMonth => 'משבצות אימון פתוחות החודש';
+
+  @override
+  String get weeklyStationTimeTitle => 'שעות עמדה לפי עובד';
+
+  @override
+  String get monthlyTrainingTitle => 'אימונים חודשיים';
+
+  @override
+  String get availabilityReportTitle => 'דוח זמינות';
+
+  @override
+  String get previousMonth => 'חודש קודם';
+
+  @override
+  String get nextMonth => 'חודש הבא';
+
+  @override
+  String hoursValue(String hours) {
+    return '$hours שע׳';
+  }
+
+  @override
+  String shiftsTally(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count משמרות',
+      one: 'משמרת אחת',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String sessionsTally(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count אימונים',
+      one: 'אימון אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String traineesAssignedTally(int filled, int total) {
+    return '$filled/$total חניכים שובצו';
+  }
+
+  @override
+  String get alwaysPresent => 'נוכחות קבועה';
+
+  @override
+  String presenceWindowsTally(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count חלונות',
+      one: 'חלון אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get noDataForPeriod => 'אין נתונים לתקופה זו.';
 
   @override
   String hiUser(String name) {

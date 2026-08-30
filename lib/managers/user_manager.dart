@@ -11,6 +11,7 @@ import '../managers/dispatch_manager.dart';
 import '../managers/notifications_manager.dart';
 import '../managers/shifts_manager.dart';
 import '../managers/stations_manager.dart';
+import '../managers/statistics_manager.dart';
 import '../managers/training_manager.dart';
 import '../services/user_service.dart';
 
@@ -97,6 +98,7 @@ class UserManager {
     await locator<ShiftsManager>().initListeners(appUser);
     await locator<AvailabilityManager>().initListeners(appUser);
     await locator<TrainingManager>().initListeners(appUser);
+    await locator<StatisticsManager>().initListeners(appUser);
     await locator<DispatchManager>().initListeners(appUser);
     await locator<NotificationsManager>().initPushNotifications(appUser.id);
   }
@@ -110,6 +112,7 @@ class UserManager {
       locator<ShiftsManager>().cancelListeners();
       locator<AvailabilityManager>().cancelListeners();
       locator<TrainingManager>().cancelListeners();
+      locator<StatisticsManager>().cancelListeners();
       locator<DispatchManager>().cancelListeners();
     }
   }

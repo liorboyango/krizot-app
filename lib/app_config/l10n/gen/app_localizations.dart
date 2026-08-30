@@ -194,6 +194,12 @@ abstract class AppLocalizations {
   /// **'Staff'**
   String get navStaff;
 
+  /// No description provided for @navStatistics.
+  ///
+  /// In en, this message translates to:
+  /// **'Statistics'**
+  String get navStatistics;
+
   /// No description provided for @navDispatch.
   ///
   /// In en, this message translates to:
@@ -359,7 +365,7 @@ abstract class AppLocalizations {
   /// No description provided for @autoFillExplainer.
   ///
   /// In en, this message translates to:
-  /// **'Creates the day\'s missing shifts, then fills all open shifts on {date} using staff availability and certifications.'**
+  /// **'Creates the day\'s missing shifts, then fills all open shifts and open training slots on {date} using staff availability, certifications and training priorities.'**
   String autoFillExplainer(String date);
 
   /// No description provided for @aiInstructionsLabel.
@@ -409,6 +415,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{Created 1 missing shift} other{Created {count} missing shifts}}'**
   String createdShiftsNote(int count);
+
+  /// No description provided for @filledTrainingSlots.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Filled no training slots} =1{Filled 1 training slot} other{Filled {count} training slots}}'**
+  String filledTrainingSlots(int count);
 
   /// No description provided for @findReplacementTitle.
   ///
@@ -1429,6 +1441,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Inactive scenarios are hidden from the dispatch board'**
   String get inactiveHiddenFromBoard;
+
+  /// No description provided for @statisticsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Statistics'**
+  String get statisticsTitle;
+
+  /// No description provided for @statWeeklyStationHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Station hours this week'**
+  String get statWeeklyStationHours;
+
+  /// No description provided for @statActiveStaffWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Staff assigned this week'**
+  String get statActiveStaffWeek;
+
+  /// No description provided for @statTrainingHoursMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Training hours this month'**
+  String get statTrainingHoursMonth;
+
+  /// No description provided for @statOpenTrainingSlotsMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Open training slots this month'**
+  String get statOpenTrainingSlotsMonth;
+
+  /// No description provided for @weeklyStationTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Station time per user'**
+  String get weeklyStationTimeTitle;
+
+  /// No description provided for @monthlyTrainingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly training'**
+  String get monthlyTrainingTitle;
+
+  /// No description provided for @availabilityReportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability report'**
+  String get availabilityReportTitle;
+
+  /// No description provided for @previousMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous month'**
+  String get previousMonth;
+
+  /// No description provided for @nextMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Next month'**
+  String get nextMonth;
+
+  /// No description provided for @hoursValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h'**
+  String hoursValue(String hours);
+
+  /// No description provided for @shiftsTally.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 shift} other{{count} shifts}}'**
+  String shiftsTally(int count);
+
+  /// No description provided for @sessionsTally.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 session} other{{count} sessions}}'**
+  String sessionsTally(int count);
+
+  /// No description provided for @traineesAssignedTally.
+  ///
+  /// In en, this message translates to:
+  /// **'{filled}/{total} trainees assigned'**
+  String traineesAssignedTally(int filled, int total);
+
+  /// No description provided for @alwaysPresent.
+  ///
+  /// In en, this message translates to:
+  /// **'Always present'**
+  String get alwaysPresent;
+
+  /// No description provided for @presenceWindowsTally.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 window} other{{count} windows}}'**
+  String presenceWindowsTally(int count);
+
+  /// No description provided for @noDataForPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'No data for this period.'**
+  String get noDataForPeriod;
 
   /// No description provided for @hiUser.
   ///
