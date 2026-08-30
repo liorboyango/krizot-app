@@ -30,4 +30,9 @@ export const MAX_SHIFT_MINUTES = 180;
 export const DEFAULT_MAX_DAILY_HOURS = 12;
 export const DEFAULT_MAX_REPAIR_ATTEMPTS = 2;
 export const DEFAULT_LLM_PROVIDER = 'anthropic';
-export const DEFAULT_LLM_MODEL = 'claude-opus-5';
+/**
+ * Sonnet by default: the auto-fill repair loop makes up to three planning
+ * calls inside the callable's 300s budget, which Opus-length generations on
+ * a full day don't reliably fit. Override via the config/llm doc.
+ */
+export const DEFAULT_LLM_MODEL = 'claude-sonnet-5';

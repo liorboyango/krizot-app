@@ -11,11 +11,15 @@ class FunctionsService {
   final _functions = locator<FirebaseFunctions>();
 
   Future<Map<String, dynamic>?> _call(
-      String name, Map<String, dynamic> data) async {
+      String name, Map<String, dynamic> data,
+      {Duration? timeout}) async {
     _log.info('$name - START');
     try {
       final result = await _functions
-          .httpsCallable(name)
+          .httpsCallable(
+              name,
+              options:
+                  timeout != null ? HttpsCallableOptions(timeout: timeout) : null)
           .call<Map<Object?, Object?>>(data);
       return Map<String, dynamic>.from(result.data);
     } catch (e) {
@@ -27,17 +31,27 @@ class FunctionsService {
   /// Auto-fill open shifts for a day. [dayKey] is 'YYYY-MM-DD'.
   /// [instructions] is optional free-text manager guidance for the LLM.
   /// Returns `{filled: int, unfilled: [shiftId], notes: string}` or null.
+  /// LLM planning can run for minutes — the timeout must cover the
+  /// function's own 300s budget, not the 70s callable default.
   Future<Map<String, dynamic>?> autoFillSchedule(String dayKey,
           {String? instructions}) =>
-      _call(Constants.FN_AUTO_FILL_SCHEDULE, {
-        'date': dayKey,
-        'instructions': ?instructions,
-      });
+      _call(
+        Constants.FN_AUTO_FILL_SCHEDULE,
+        {
+          'date': dayKey,
+          'instructions': ?instructions,
+        },
+        timeout: const Duration(seconds: 305),
+      );
 
   /// Ranked replacement candidates for a shift whose assignee dropped out.
   /// Returns `{candidates: [{userId, displayName, rank, reason}]}` or null.
-  Future<Map<String, dynamic>?> suggestReplacement(String shiftId) =>
-      _call(Constants.FN_SUGGEST_REPLACEMENT, {'shiftId': shiftId});
+  Future<Map<String, dynamic>?> suggestReplacement(String shiftId) => _call(
+        Constants.FN_SUGGEST_REPLACEMENT,
+        {'shiftId': shiftId},
+        // Matches the function's own 120s budget (one LLM ranking call).
+        timeout: const Duration(seconds: 125),
+      );
 
   /// Trigger an emergency call-out. Returns `{eventId, alertedCount}` or null.
   Future<Map<String, dynamic>?> triggerEmergency(String eventTypeId) =>

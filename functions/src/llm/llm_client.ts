@@ -6,7 +6,7 @@
  * which the AI SDK providers read natively).
  */
 
-import { generateObject } from 'ai';
+import { streamObject } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { google } from '@ai-sdk/google';
 import { xai } from '@ai-sdk/xai';
@@ -28,14 +28,21 @@ export async function generateStructured<SCHEMA extends z.ZodType>(options: {
 }): Promise<z.infer<SCHEMA>> {
   const { config, schema, system, prompt } = options;
   const provider = registry[config.provider] ?? registry.anthropic;
-  const { object } = await generateObject({
+  // Streamed on purpose: a non-streaming call gets no response headers until
+  // the whole plan is generated, and multi-minute generations then trip the
+  // runtime's fetch headers-timeout ("Headers Timeout Error"). Streaming
+  // keeps bytes flowing; the awaited object is still schema-validated.
+  const result = streamObject({
     model: provider(config.model),
     schema,
     system,
     prompt,
+    // A plan is a few thousand tokens — don't let the provider default to
+    // an enormous max_tokens that schedules a very long generation window.
+    maxOutputTokens: 32_000,
     ...(config.temperature !== undefined
       ? { temperature: config.temperature }
       : {}),
   });
-  return object as z.infer<SCHEMA>;
+  return (await result.object) as z.infer<SCHEMA>;
 }
