@@ -2,7 +2,8 @@
  * triggerEmergency({eventTypeId})
  *
  * Resolves responders server-side (holders of ANY responder certification,
- * excluding status 'unavailable') and creates the emergencyEvents doc; the
+ * excluding status 'unavailable', and — for a unit-scoped event type —
+ * placed in that unit) and creates the emergencyEvents doc; the
  * onEmergencyEventCreate trigger handles the FCM fan-out.
  */
 
@@ -40,16 +41,20 @@ export const triggerEmergency = onCall(
     }
 
     const responderCerts = (eventType.responderCertifications as string[]) ?? [];
+    // Same semantics as station org scope: a unit-scoped event type only
+    // alerts users placed in that unit; an unscoped one alerts everyone.
+    const eventSite = eventType.site as string | undefined;
     const users = await loadUsers();
     const responders = users.filter(
       (user) =>
         user.status !== 'unavailable' &&
+        (!eventSite || user.site === eventSite) &&
         responderCerts.some((cert) => user.certifications.includes(cert)),
     );
     if (responders.length === 0) {
       throw new HttpsError(
         'failed-precondition',
-        'No responders hold the required certifications.',
+        'No responders in scope hold the required certifications.',
       );
     }
 
@@ -66,6 +71,7 @@ export const triggerEmergency = onCall(
         displayName: user.displayName,
       })),
       stationIds: (eventType.stationIds as string[]) ?? [],
+      ...(eventSite ? { site: eventSite } : {}),
     });
 
     return { eventId: eventRef.id, alertedCount: responders.length };

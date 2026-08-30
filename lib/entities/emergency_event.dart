@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'org_scope.dart';
+
 enum EmergencyStatus {
   active,
   resolved;
@@ -20,9 +22,9 @@ class AlertedUser {
   const AlertedUser({required this.uid, required this.displayName});
 
   factory AlertedUser.fromMap(Map<String, dynamic> map) => AlertedUser(
-        uid: map['uid'] as String? ?? '',
-        displayName: map['displayName'] as String? ?? '',
-      );
+    uid: map['uid'] as String? ?? '',
+    displayName: map['displayName'] as String? ?? '',
+  );
 
   Map<String, dynamic> toMap() => {'uid': uid, 'displayName': displayName};
 }
@@ -39,6 +41,10 @@ class EmergencyEvent {
   final List<String> alertedUserIds;
   final List<AlertedUser> alertedUsers;
   final List<String> stationIds;
+
+  /// Unit copied from the event type at trigger time so the active-events
+  /// board can filter per unit. Null = organization-wide.
+  final Site? site;
   final String? resolvedBy;
   final DateTime? resolvedAt;
 
@@ -52,6 +58,7 @@ class EmergencyEvent {
     this.alertedUserIds = const [],
     this.alertedUsers = const [],
     this.stationIds = const [],
+    this.site,
     this.resolvedBy,
     this.resolvedAt,
   });
@@ -64,12 +71,16 @@ class EmergencyEvent {
         triggeredBy: map['triggeredBy'] as String? ?? '',
         triggeredAt: (map['triggeredAt'] as Timestamp?)?.toDate(),
         status: EmergencyStatus.fromString(map['status'] as String?),
-        alertedUserIds:
-            List<String>.from(map['alertedUserIds'] as List? ?? const []),
+        alertedUserIds: List<String>.from(
+          map['alertedUserIds'] as List? ?? const [],
+        ),
         alertedUsers: (map['alertedUsers'] as List? ?? const [])
-            .map((u) => AlertedUser.fromMap(Map<String, dynamic>.from(u as Map)))
+            .map(
+              (u) => AlertedUser.fromMap(Map<String, dynamic>.from(u as Map)),
+            )
             .toList(),
         stationIds: List<String>.from(map['stationIds'] as List? ?? const []),
+        site: Site.fromString(map['site'] as String?),
         resolvedBy: map['resolvedBy'] as String?,
         resolvedAt: (map['resolvedAt'] as Timestamp?)?.toDate(),
       );
@@ -78,17 +89,18 @@ class EmergencyEvent {
       EmergencyEvent.fromMap(doc.id, doc.data() ?? {});
 
   Map<String, dynamic> toMap() => {
-        'eventTypeId': eventTypeId,
-        'eventTypeName': eventTypeName,
-        'triggeredBy': triggeredBy,
-        if (triggeredAt != null) 'triggeredAt': Timestamp.fromDate(triggeredAt!),
-        'status': status.name,
-        'alertedUserIds': alertedUserIds,
-        'alertedUsers': alertedUsers.map((u) => u.toMap()).toList(),
-        'stationIds': stationIds,
-        if (resolvedBy != null) 'resolvedBy': resolvedBy,
-        if (resolvedAt != null) 'resolvedAt': Timestamp.fromDate(resolvedAt!),
-      };
+    'eventTypeId': eventTypeId,
+    'eventTypeName': eventTypeName,
+    'triggeredBy': triggeredBy,
+    if (triggeredAt != null) 'triggeredAt': Timestamp.fromDate(triggeredAt!),
+    'status': status.name,
+    'alertedUserIds': alertedUserIds,
+    'alertedUsers': alertedUsers.map((u) => u.toMap()).toList(),
+    'stationIds': stationIds,
+    if (site != null) 'site': site!.wireName,
+    if (resolvedBy != null) 'resolvedBy': resolvedBy,
+    if (resolvedAt != null) 'resolvedAt': Timestamp.fromDate(resolvedAt!),
+  };
 }
 
 /// One responder's acknowledgement of an emergency event.
@@ -104,6 +116,7 @@ class EmergencyAck {
         ackAt: ((doc.data() ?? {})['ackAt'] as Timestamp?)?.toDate(),
       );
 
-  Map<String, dynamic> toMap() =>
-      {'ackAt': ackAt != null ? Timestamp.fromDate(ackAt!) : null};
+  Map<String, dynamic> toMap() => {
+    'ackAt': ackAt != null ? Timestamp.fromDate(ackAt!) : null,
+  };
 }

@@ -4,6 +4,7 @@ import '../../../../app_config/l10n/gen/app_localizations.dart';
 import '../../../../app_config/service_locator.dart';
 import '../../../../entities/app_user.dart';
 import '../../../../managers/availability_manager.dart';
+import '../../../../managers/org_filter_manager.dart';
 import '../../../../managers/shifts_manager.dart';
 import '../../../../managers/stations_manager.dart';
 import '../../../../utils/app_colors.dart';
@@ -58,7 +59,9 @@ class _EmployeeRosterPanelState extends State<EmployeeRosterPanel> {
             child: Text(
               AppLocalizations.of(context)!.dragToAssign,
               style: const TextStyle(
-                  fontSize: 11, color: AppColors.textSecondary),
+                fontSize: 11,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           Padding(
@@ -77,26 +80,36 @@ class _EmployeeRosterPanelState extends State<EmployeeRosterPanel> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: StreamBuilder<List<AppUser>>(
-              initialData: shiftsManager.employees,
-              stream: shiftsManager.employeesStream,
-              builder: (context, snapshot) {
-                final users = snapshot.data ?? const [];
-                final trimmed = query.trim().toLowerCase();
-                final visible = trimmed.isEmpty
-                    ? users
-                    : users
-                        .where((u) =>
-                            u.displayName.toLowerCase().contains(trimmed) ||
-                            u.email.toLowerCase().contains(trimmed))
-                        .toList();
-                return ListView(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                  children: [
-                    for (final user in visible) _RosterChip(user: user),
-                  ],
-                );
-              },
+            child: StreamBuilder<void>(
+              stream: locator<OrgFilterManager>().changesStream,
+              builder: (context, _) => StreamBuilder<List<AppUser>>(
+                initialData: shiftsManager.employees,
+                stream: shiftsManager.employeesStream,
+                builder: (context, snapshot) {
+                  final orgFilter = locator<OrgFilterManager>();
+                  final users = (snapshot.data ?? const <AppUser>[]).where(
+                    orgFilter.matchesUser,
+                  );
+                  final trimmed = query.trim().toLowerCase();
+                  final visible = trimmed.isEmpty
+                      ? users.toList()
+                      : users
+                            .where(
+                              (u) =>
+                                  u.displayName.toLowerCase().contains(
+                                    trimmed,
+                                  ) ||
+                                  u.email.toLowerCase().contains(trimmed),
+                            )
+                            .toList();
+                  return ListView(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    children: [
+                      for (final user in visible) _RosterChip(user: user),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ],
@@ -138,7 +151,8 @@ class _RosterChip extends StatelessWidget {
     final selectedDay = TimeUtil.startOfDay(shiftsManager.selectedDate);
     // Off-site on the selected day: the user keeps a presence calendar but
     // has no window touching that day.
-    final offSite = availabilityManager.windowsForUser(user.id).isNotEmpty &&
+    final offSite =
+        availabilityManager.windowsForUser(user.id).isNotEmpty &&
         availabilityManager.windowsForUserDay(user.id, selectedDay).isEmpty;
     final subtitle = [
       if (user.courseNumber != null) l10n.courseTag(user.courseNumber!),
@@ -167,8 +181,10 @@ class _RosterChip extends StatelessWidget {
             Container(
               width: 10,
               height: 10,
-              decoration:
-                  BoxDecoration(color: statusColor, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: statusColor,
+                shape: BoxShape.circle,
+              ),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -180,14 +196,18 @@ class _RosterChip extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   Text(
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontSize: 11, color: AppColors.textSecondary),
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -195,8 +215,11 @@ class _RosterChip extends StatelessWidget {
             if (offSite)
               const Padding(
                 padding: EdgeInsetsDirectional.only(end: 4),
-                child: Icon(Icons.event_busy,
-                    size: 16, color: AppColors.warning),
+                child: Icon(
+                  Icons.event_busy,
+                  size: 16,
+                  color: AppColors.warning,
+                ),
               ),
             _CertBadges(user: user),
           ],
@@ -220,8 +243,11 @@ class _CertBadges extends StatelessWidget {
     if (names.isEmpty) return const SizedBox.shrink();
     return Tooltip(
       message: names,
-      child: const Icon(Icons.workspace_premium_outlined,
-          size: 16, color: AppColors.accent),
+      child: const Icon(
+        Icons.workspace_premium_outlined,
+        size: 16,
+        color: AppColors.accent,
+      ),
     );
   }
 }

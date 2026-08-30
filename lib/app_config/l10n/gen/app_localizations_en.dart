@@ -303,6 +303,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get allUnits => 'All';
 
   @override
+  String get filtersTitle => 'Filters';
+
+  @override
   String get departmentMesima => 'Mesima';
 
   @override

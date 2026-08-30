@@ -6,6 +6,7 @@ import '../../../entities/certification.dart';
 import '../../../entities/org_scope.dart';
 import '../../../entities/station.dart';
 import '../../../entities/time_window.dart';
+import '../../../managers/org_filter_manager.dart';
 import '../../../managers/stations_manager.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/snackbar_util.dart';
@@ -25,6 +26,7 @@ class StationsScreen extends StatefulWidget {
 
 class _StationsScreenState extends State<StationsScreen> {
   final stationsManager = locator<StationsManager>();
+  final orgFilter = locator<OrgFilterManager>();
   String searchQuery = '';
 
   Future<void> onAddPressed() => _StationEditorDialog.show(context);
@@ -74,37 +76,43 @@ class _StationsScreenState extends State<StationsScreen> {
             ),
           ),
           Expanded(
-            child: StreamBuilder<List<Station>>(
-              initialData: stationsManager.stations,
-              stream: stationsManager.stationsStream,
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final stations = snapshot.data!
-                    .where((s) =>
-                        searchQuery.isEmpty ||
-                        s.name.toLowerCase().contains(searchQuery))
-                    .toList();
-                if (stations.isEmpty) {
-                  return EmptyState(
-                    icon: Icons.location_on_outlined,
-                    title: l10n.noStations,
-                    description: searchQuery.isEmpty
-                        ? l10n.createFirstStation
-                        : l10n.noStationsMatch(searchQuery),
-                    actionLabel: searchQuery.isEmpty ? l10n.newStation : null,
-                    onAction: searchQuery.isEmpty ? onAddPressed : null,
+            child: StreamBuilder<void>(
+              stream: orgFilter.changesStream,
+              builder: (context, _) => StreamBuilder<List<Station>>(
+                initialData: stationsManager.stations,
+                stream: stationsManager.stationsStream,
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final stations = snapshot.data!
+                      .where(
+                        (s) =>
+                            orgFilter.matchesStation(s) &&
+                            (searchQuery.isEmpty ||
+                                s.name.toLowerCase().contains(searchQuery)),
+                      )
+                      .toList();
+                  if (stations.isEmpty) {
+                    return EmptyState(
+                      icon: Icons.location_on_outlined,
+                      title: l10n.noStations,
+                      description: searchQuery.isEmpty
+                          ? l10n.createFirstStation
+                          : l10n.noStationsMatch(searchQuery),
+                      actionLabel: searchQuery.isEmpty ? l10n.newStation : null,
+                      onAction: searchQuery.isEmpty ? onAddPressed : null,
+                    );
+                  }
+                  return ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(24, 4, 24, 88),
+                    itemCount: stations.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) =>
+                        _StationTile(station: stations[index]),
                   );
-                }
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(24, 4, 24, 88),
-                  itemCount: stations.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) =>
-                      _StationTile(station: stations[index]),
-                );
-              },
+                },
+              ),
             ),
           ),
         ],
@@ -128,14 +136,11 @@ class _StationTile extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
           backgroundColor: AppColors.accent.withValues(alpha: 0.1),
           child: Icon(
-            station.isAroundTheClock
-                ? Icons.all_inclusive
-                : Icons.schedule,
+            station.isAroundTheClock ? Icons.all_inclusive : Icons.schedule,
             color: AppColors.accent,
             size: 20,
           ),
@@ -157,10 +162,12 @@ class _StationTile extends StatelessWidget {
               station.isAroundTheClock
                   ? l10n.manning247
                   : l10n.onDemandWindows(station.activeWindows.join(', ')),
-              ?OrgScopePicker.scopeLabel(l10n,
-                  site: station.site,
-                  department: station.department,
-                  jobRole: station.jobRole),
+              ?OrgScopePicker.scopeLabel(
+                l10n,
+                site: station.site,
+                department: station.department,
+                jobRole: station.jobRole,
+              ),
               if (certNames.isNotEmpty)
                 l10n.requiresCerts(certNames.join(', ')),
             ].join('  ·  '),
@@ -178,8 +185,11 @@ class _StationTile extends StatelessWidget {
             ),
             IconButton(
               tooltip: l10n.delete,
-              icon: const Icon(Icons.delete_outline,
-                  size: 20, color: AppColors.danger),
+              icon: const Icon(
+                Icons.delete_outline,
+                size: 20,
+                color: AppColors.danger,
+              ),
               onPressed: () => _confirmDelete(context),
             ),
           ],
@@ -213,7 +223,10 @@ class _StationTile extends StatelessWidget {
     final success = await locator<StationsManager>().deleteStation(station.id);
     if (!success && context.mounted) {
       SnackBarUtil.showSnackBar(
-          context, l10n.failedToDeleteStation, Variant.ERROR);
+        context,
+        l10n.failedToDeleteStation,
+        Variant.ERROR,
+      );
     }
   }
 }
@@ -238,17 +251,15 @@ class _StationEditorDialog extends StatefulWidget {
 
 class _StationEditorDialogState extends State<_StationEditorDialog> {
   final formKey = GlobalKey<FormState>();
-  late final nameController =
-      TextEditingController(text: widget.station?.name);
-  late final notesController =
-      TextEditingController(text: widget.station?.notes);
+  late final nameController = TextEditingController(text: widget.station?.name);
+  late final notesController = TextEditingController(
+    text: widget.station?.notes,
+  );
   late StationStatus status = widget.station?.status ?? StationStatus.active;
   late ManningType manningType =
       widget.station?.manningType ?? ManningType.aroundTheClock;
   late List<TimeWindow> windows = [...?widget.station?.activeWindows];
-  late Set<String> requiredCerts = {
-    ...?widget.station?.requiredCertifications
-  };
+  late Set<String> requiredCerts = {...?widget.station?.requiredCertifications};
   late Site? site = widget.station?.site;
   late Department? department = widget.station?.department;
   late JobRole? jobRole = widget.station?.jobRole;
@@ -281,9 +292,10 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
     if (!formKey.currentState!.validate()) return;
     if (manningType == ManningType.onDemand && windows.isEmpty) {
       SnackBarUtil.showSnackBar(
-          context,
-          AppLocalizations.of(context)!.onDemandNeedsWindow,
-          Variant.WARNING);
+        context,
+        AppLocalizations.of(context)!.onDemandNeedsWindow,
+        Variant.WARNING,
+      );
       return;
     }
     setState(() => isBusy = true);
@@ -312,8 +324,11 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
     if (success) {
       Navigator.pop(context);
     } else {
-      SnackBarUtil.showSnackBar(context,
-          AppLocalizations.of(context)!.failedToSaveStation, Variant.ERROR);
+      SnackBarUtil.showSnackBar(
+        context,
+        AppLocalizations.of(context)!.failedToSaveStation,
+        Variant.ERROR,
+      );
     }
   }
 
@@ -331,10 +346,9 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
       helpText: l10n.windowEnd,
     );
     if (end == null || !mounted) return;
-    setState(() => windows.add(TimeWindow(
-          start: _hhmm(start),
-          end: _hhmm(end),
-        )));
+    setState(
+      () => windows.add(TimeWindow(start: _hhmm(start), end: _hhmm(end))),
+    );
   }
 
   static String _hhmm(TimeOfDay time) =>
@@ -363,8 +377,10 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
                       : null,
                 ),
                 const SizedBox(height: 16),
-                Text(l10n.orgPlacementTitle,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  l10n.orgPlacementTitle,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 8),
                 OrgScopePicker(
                   site: site,
@@ -373,35 +389,40 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
                   onSiteChanged: (value) => setState(() => site = value),
                   onDepartmentChanged: (value) =>
                       setState(() => department = value),
-                  onJobRoleChanged: (value) =>
-                      setState(() => jobRole = value),
+                  onJobRoleChanged: (value) => setState(() => jobRole = value),
                 ),
                 const SizedBox(height: 16),
                 SegmentedButton<StationStatus>(
                   segments: [
                     ButtonSegment(
-                        value: StationStatus.active,
-                        label: Text(l10n.stationActive)),
+                      value: StationStatus.active,
+                      label: Text(l10n.stationActive),
+                    ),
                     ButtonSegment(
-                        value: StationStatus.closed,
-                        label: Text(l10n.stationClosed)),
+                      value: StationStatus.closed,
+                      label: Text(l10n.stationClosed),
+                    ),
                   ],
                   selected: {status},
                   onSelectionChanged: (selection) =>
                       setState(() => status = selection.first),
                 ),
                 const SizedBox(height: 16),
-                Text(l10n.manningLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  l10n.manningLabel,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 8),
                 SegmentedButton<ManningType>(
                   segments: [
                     ButtonSegment(
-                        value: ManningType.aroundTheClock,
-                        label: Text(l10n.twentyFourSeven)),
+                      value: ManningType.aroundTheClock,
+                      label: Text(l10n.twentyFourSeven),
+                    ),
                     ButtonSegment(
-                        value: ManningType.onDemand,
-                        label: Text(l10n.onDemand)),
+                      value: ManningType.onDemand,
+                      label: Text(l10n.onDemand),
+                    ),
                   ],
                   selected: {manningType},
                   onSelectionChanged: (selection) =>
@@ -427,22 +448,26 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                Text(l10n.requiredCertificationsLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  l10n.requiredCertificationsLabel,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 8),
                 StreamBuilder<List<Certification>>(
                   initialData: stationsManager.certifications,
                   stream: stationsManager.certificationsStream,
                   builder: (context, snapshot) {
-                    final certifications = (snapshot.data ??
-                            const <Certification>[])
-                        .where(_certVisible)
-                        .toList();
+                    final certifications =
+                        (snapshot.data ?? const <Certification>[])
+                            .where(_certVisible)
+                            .toList();
                     if (certifications.isEmpty) {
                       return Text(
                         l10n.noCertsDefinedAddOnStaff,
                         style: const TextStyle(
-                            color: AppColors.textSecondary, fontSize: 13),
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
                       );
                     }
                     return Wrap(
@@ -484,7 +509,8 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
         FilledButton(
           onPressed: isBusy ? null : onSavePressed,
           child: Text(
-              isBusy ? l10n.saving : (isEditing ? l10n.save : l10n.create)),
+            isBusy ? l10n.saving : (isEditing ? l10n.save : l10n.create),
+          ),
         ),
       ],
     );

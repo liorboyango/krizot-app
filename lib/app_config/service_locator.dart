@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../managers/availability_manager.dart';
 import '../managers/dispatch_manager.dart';
 import '../managers/notifications_manager.dart';
+import '../managers/org_filter_manager.dart';
 import '../managers/shifts_manager.dart';
 import '../managers/stations_manager.dart';
 import '../managers/training_manager.dart';
@@ -36,14 +37,24 @@ Future<void> initSingletons({
   }
 
   // The project uses the named Firestore database, not (default).
-  locator.registerSingleton<FirebaseFirestore>(FirebaseFirestore.instanceFor(
-    app: firebaseApp,
-    databaseId: Constants.FIRESTORE_DATABASE_ID,
-  ));
-  locator.registerSingleton<FirebaseFunctions>(FirebaseFunctions.instanceFor(
-    app: firebaseApp,
-    region: Constants.FUNCTIONS_REGION,
-  ));
+  locator.registerSingleton<FirebaseFirestore>(
+    FirebaseFirestore.instanceFor(
+      app: firebaseApp,
+      databaseId: Constants.FIRESTORE_DATABASE_ID,
+    ),
+  );
+  locator.registerSingleton<FirebaseFunctions>(
+    FirebaseFunctions.instanceFor(
+      app: firebaseApp,
+      region: Constants.FUNCTIONS_REGION,
+    ),
+  );
+
+  /// Dashboard-wide org filter (the sidebar unit/department/role selector)
+  locator.registerSingleton<OrgFilterManager>(
+    OrgFilterManager(),
+    dispose: (manager) => manager.dispose(),
+  );
 
   /// Stations + certifications
   locator.registerSingleton<StationsService>(StationsService());
@@ -101,8 +112,10 @@ void registerGoRouter(GoRouter router) {
   if (locator.isRegistered<GoRouter>()) {
     locator.unregister<GoRouter>();
   }
-  locator.registerSingleton<GoRouter>(router,
-      dispose: (router) => router.dispose());
+  locator.registerSingleton<GoRouter>(
+    router,
+    dispose: (router) => router.dispose(),
+  );
 }
 
 Future<void> disposeAllSingletons() async => locator.reset(dispose: true);

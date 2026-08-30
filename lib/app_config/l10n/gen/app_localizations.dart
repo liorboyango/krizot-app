@@ -590,6 +590,12 @@ abstract class AppLocalizations {
   /// **'All'**
   String get allUnits;
 
+  /// No description provided for @filtersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get filtersTitle;
+
   /// No description provided for @departmentMesima.
   ///
   /// In en, this message translates to:

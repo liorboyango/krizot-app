@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'org_scope.dart';
+
 enum EventPriority {
   high,
   critical;
@@ -20,6 +22,10 @@ class EventType {
   final List<String> responderCertifications;
   final List<String> stationIds;
   final EventPriority priority;
+
+  /// Unit the scenario belongs to — only that unit's staff are alerted and
+  /// only that unit's board shows it. Null = organization-wide.
+  final Site? site;
   final bool active;
   final DateTime? createdAt;
 
@@ -30,32 +36,36 @@ class EventType {
     this.responderCertifications = const [],
     this.stationIds = const [],
     this.priority = EventPriority.high,
+    this.site,
     this.active = true,
     this.createdAt,
   });
 
   factory EventType.fromMap(String id, Map<String, dynamic> map) => EventType(
-        id: id,
-        name: map['name'] as String? ?? '',
-        description: map['description'] as String?,
-        responderCertifications: List<String>.from(
-            map['responderCertifications'] as List? ?? const []),
-        stationIds: List<String>.from(map['stationIds'] as List? ?? const []),
-        priority: EventPriority.fromString(map['priority'] as String?),
-        active: map['active'] as bool? ?? true,
-        createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
-      );
+    id: id,
+    name: map['name'] as String? ?? '',
+    description: map['description'] as String?,
+    responderCertifications: List<String>.from(
+      map['responderCertifications'] as List? ?? const [],
+    ),
+    stationIds: List<String>.from(map['stationIds'] as List? ?? const []),
+    priority: EventPriority.fromString(map['priority'] as String?),
+    site: Site.fromString(map['site'] as String?),
+    active: map['active'] as bool? ?? true,
+    createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
+  );
 
   factory EventType.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) =>
       EventType.fromMap(doc.id, doc.data() ?? {});
 
   Map<String, dynamic> toMap() => {
-        'name': name,
-        if (description != null) 'description': description,
-        'responderCertifications': responderCertifications,
-        'stationIds': stationIds,
-        'priority': priority.name,
-        'active': active,
-        if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),
-      };
+    'name': name,
+    if (description != null) 'description': description,
+    'responderCertifications': responderCertifications,
+    'stationIds': stationIds,
+    'priority': priority.name,
+    if (site != null) 'site': site!.wireName,
+    'active': active,
+    if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),
+  };
 }

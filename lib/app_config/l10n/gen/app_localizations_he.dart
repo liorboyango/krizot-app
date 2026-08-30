@@ -302,6 +302,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get allUnits => 'הכל';
 
   @override
+  String get filtersTitle => 'סינון';
+
+  @override
   String get departmentMesima => 'משימה';
 
   @override
@@ -314,7 +317,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get jobRoleBakara => 'בקרה';
 
   @override
-  String get jobRoleOfficer => 'קצין';
+  String get jobRoleOfficer => 'בקר';
 
   @override
   String get jobRoleLabel => 'תפקיד מקצועי';

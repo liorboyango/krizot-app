@@ -8,6 +8,7 @@ import '../../../entities/day_requirement.dart';
 import '../../../entities/shift.dart';
 import '../../../entities/station.dart';
 import '../../../entities/training_session.dart';
+import '../../../managers/org_filter_manager.dart';
 import '../../../managers/shifts_manager.dart';
 import '../../../managers/stations_manager.dart';
 import '../../../managers/training_manager.dart';
@@ -45,13 +46,13 @@ class _SchedulerScreenState extends State<SchedulerScreen> {
   final shiftsManager = locator<ShiftsManager>();
   final stationsManager = locator<StationsManager>();
   final trainingManager = locator<TrainingManager>();
+  final orgFilter = locator<OrgFilterManager>();
 
   _SchedulerView _view = _SchedulerView.day;
 
   @override
   Widget build(BuildContext context) {
-    final showRoster =
-        MediaQuery.of(context).size.width >= Breakpoints.desktop;
+    final showRoster = MediaQuery.of(context).size.width >= Breakpoints.desktop;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Row(
@@ -70,75 +71,85 @@ class _SchedulerScreenState extends State<SchedulerScreen> {
                   ),
                 ),
                 Expanded(
-                  child: StreamBuilder<List<Station>>(
-                    initialData: stationsManager.stations,
-                    stream: stationsManager.stationsStream,
-                    builder: (context, stationsSnapshot) {
-                      if (!stationsSnapshot.hasData) {
-                        return const Center(
-                            child: CircularProgressIndicator());
-                      }
-                      final stations = stationsSnapshot.data!
-                          .where((s) => s.status == StationStatus.active)
-                          .toList();
-                      if (stations.isEmpty) {
-                        return Center(
-                          child: Text(
-                            AppLocalizations.of(context)!.noActiveStations,
-                            style: const TextStyle(
-                                color: AppColors.textSecondary),
-                          ),
-                        );
-                      }
-                      return StreamBuilder<List<Shift>>(
-                        initialData: shiftsManager.weekShifts,
-                        stream: shiftsManager.weekShiftsStream,
-                        builder: (context, shiftsSnapshot) {
-                          return StreamBuilder<List<TrainingSession>>(
-                            initialData: trainingManager.weekSessions,
-                            stream: trainingManager.weekSessionsStream,
-                            builder: (context, sessionsSnapshot) {
-                              return StreamBuilder<DateTime>(
-                                initialData: shiftsManager.selectedDate,
-                                stream: shiftsManager.selectedDateStream,
-                                builder: (context, dateSnapshot) {
-                                  final selected =
-                                      dateSnapshot.data ?? DateTime.now();
-                                  final shifts =
-                                      shiftsSnapshot.data ?? const <Shift>[];
-                                  final sessions = sessionsSnapshot.data ??
-                                      const <TrainingSession>[];
-                                  if (_view == _SchedulerView.day) {
-                                    final day = TimeUtil.startOfDay(selected);
-                                    return Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        _DayRequirementsBar(day: day),
-                                        Expanded(
-                                          child: _DayGrid(
-                                            stations: stations,
-                                            day: day,
-                                            shifts: shifts,
-                                            sessions: sessions,
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  }
-                                  return _WeekGrid(
-                                    stations: stations,
-                                    days: TimeUtil.weekDays(selected),
-                                    shifts: shifts,
-                                    sessions: sessions,
-                                  );
-                                },
-                              );
-                            },
+                  child: StreamBuilder<void>(
+                    stream: orgFilter.changesStream,
+                    builder: (context, _) => StreamBuilder<List<Station>>(
+                      initialData: stationsManager.stations,
+                      stream: stationsManager.stationsStream,
+                      builder: (context, stationsSnapshot) {
+                        if (!stationsSnapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
                           );
-                        },
-                      );
-                    },
+                        }
+                        final stations = stationsSnapshot.data!
+                            .where(
+                              (s) =>
+                                  s.status == StationStatus.active &&
+                                  orgFilter.matchesStation(s),
+                            )
+                            .toList();
+                        if (stations.isEmpty) {
+                          return Center(
+                            child: Text(
+                              AppLocalizations.of(context)!.noActiveStations,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          );
+                        }
+                        return StreamBuilder<List<Shift>>(
+                          initialData: shiftsManager.weekShifts,
+                          stream: shiftsManager.weekShiftsStream,
+                          builder: (context, shiftsSnapshot) {
+                            return StreamBuilder<List<TrainingSession>>(
+                              initialData: trainingManager.weekSessions,
+                              stream: trainingManager.weekSessionsStream,
+                              builder: (context, sessionsSnapshot) {
+                                return StreamBuilder<DateTime>(
+                                  initialData: shiftsManager.selectedDate,
+                                  stream: shiftsManager.selectedDateStream,
+                                  builder: (context, dateSnapshot) {
+                                    final selected =
+                                        dateSnapshot.data ?? DateTime.now();
+                                    final shifts =
+                                        shiftsSnapshot.data ?? const <Shift>[];
+                                    final sessions =
+                                        sessionsSnapshot.data ??
+                                        const <TrainingSession>[];
+                                    if (_view == _SchedulerView.day) {
+                                      final day = TimeUtil.startOfDay(selected);
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          _DayRequirementsBar(day: day),
+                                          Expanded(
+                                            child: _DayGrid(
+                                              stations: stations,
+                                              day: day,
+                                              shifts: shifts,
+                                              sessions: sessions,
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }
+                                    return _WeekGrid(
+                                      stations: stations,
+                                      days: TimeUtil.weekDays(selected),
+                                      shifts: shifts,
+                                      sessions: sessions,
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ),
               ],
@@ -195,7 +206,7 @@ class _Header extends StatelessWidget {
               isDayView
                   ? DateFormat('EEE d MMM yyyy').format(selected)
                   : '${DateFormat('d MMM').format(monday)} – '
-                      '${DateFormat('d MMM yyyy').format(sunday)}',
+                        '${DateFormat('d MMM yyyy').format(sunday)}',
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
@@ -204,8 +215,9 @@ class _Header extends StatelessWidget {
             IconButton(
               tooltip: isDayView ? l10n.nextDay : l10n.nextWeek,
               icon: const Icon(Icons.chevron_right),
-              onPressed:
-                  isDayView ? shiftsManager.nextDay : shiftsManager.nextWeek,
+              onPressed: isDayView
+                  ? shiftsManager.nextDay
+                  : shiftsManager.nextWeek,
             ),
             TextButton(
               onPressed: () => shiftsManager.selectDate(DateTime.now()),
@@ -215,17 +227,18 @@ class _Header extends StatelessWidget {
             SegmentedButton<_SchedulerView>(
               segments: [
                 ButtonSegment(
-                    value: _SchedulerView.day, label: Text(l10n.dayView)),
+                  value: _SchedulerView.day,
+                  label: Text(l10n.dayView),
+                ),
                 ButtonSegment(
-                    value: _SchedulerView.week, label: Text(l10n.weekView)),
+                  value: _SchedulerView.week,
+                  label: Text(l10n.weekView),
+                ),
               ],
               selected: {view},
-              onSelectionChanged: (selection) =>
-                  onViewChanged(selection.first),
+              onSelectionChanged: (selection) => onViewChanged(selection.first),
               showSelectedIcon: false,
-              style: const ButtonStyle(
-                visualDensity: VisualDensity.compact,
-              ),
+              style: const ButtonStyle(visualDensity: VisualDensity.compact),
             ),
             const Spacer(),
             IconButton(
@@ -237,13 +250,17 @@ class _Header extends StatelessWidget {
               tooltip: l10n.editRequirements,
               icon: const Icon(Icons.checklist_outlined),
               onPressed: () => DayRequirementsDialog.show(
-                  context, TimeUtil.startOfDay(shiftsManager.selectedDate)),
+                context,
+                TimeUtil.startOfDay(shiftsManager.selectedDate),
+              ),
             ),
             IconButton(
               tooltip: l10n.newTrainingSession,
               icon: const Icon(Icons.school_outlined),
-              onPressed: () => TrainingEditorDialog.show(context,
-                  day: TimeUtil.startOfDay(shiftsManager.selectedDate)),
+              onPressed: () => TrainingEditorDialog.show(
+                context,
+                day: TimeUtil.startOfDay(shiftsManager.selectedDate),
+              ),
             ),
             const SizedBox(width: 4),
             FilledButton.icon(
@@ -251,8 +268,7 @@ class _Header extends StatelessWidget {
                 final day = await showDatePicker(
                   context: context,
                   initialDate: shiftsManager.selectedDate,
-                  firstDate:
-                      DateTime.now().subtract(const Duration(days: 1)),
+                  firstDate: DateTime.now().subtract(const Duration(days: 1)),
                   lastDate: DateTime.now().add(const Duration(days: 365)),
                   helpText: l10n.autoFillWhichDay,
                 );
@@ -298,14 +314,14 @@ class _WeekGrid extends StatelessWidget {
               border: TableBorder.all(color: AppColors.border, width: 1),
               children: [
                 TableRow(
-                  decoration:
-                      const BoxDecoration(color: AppColors.tableHeader),
+                  decoration: const BoxDecoration(color: AppColors.tableHeader),
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(10),
-                      child: Text(AppLocalizations.of(context)!.stationColumn,
-                          style:
-                              const TextStyle(fontWeight: FontWeight.w700)),
+                      child: Text(
+                        AppLocalizations.of(context)!.stationColumn,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
                     ),
                     for (final day in days)
                       Padding(
@@ -330,13 +346,16 @@ class _WeekGrid extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(station.name,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600)),
+                            Text(
+                              station.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                             Text(
                               station.isAroundTheClock
                                   ? AppLocalizations.of(context)!
-                                      .twentyFourSeven
+                                        .twentyFourSeven
                                   : station.activeWindows.join(', '),
                               style: const TextStyle(
                                 fontSize: 11,
@@ -351,15 +370,17 @@ class _WeekGrid extends StatelessWidget {
                     ],
                   ),
                 TableRow(
-                  decoration:
-                      const BoxDecoration(color: AppColors.training),
+                  decoration: const BoxDecoration(color: AppColors.training),
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(10),
                       child: Row(
                         children: [
-                          const Icon(Icons.school_outlined,
-                              size: 16, color: AppColors.trainingText),
+                          const Icon(
+                            Icons.school_outlined,
+                            size: 16,
+                            color: AppColors.trainingText,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             AppLocalizations.of(context)!.trainingRowTitle,
@@ -457,8 +478,10 @@ class _DayGrid extends StatelessWidget {
             width: _stationColWidth,
             child: Padding(
               padding: const EdgeInsets.all(10),
-              child: Text(AppLocalizations.of(context)!.stationColumn,
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
+              child: Text(
+                AppLocalizations.of(context)!.stationColumn,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
           ),
           SizedBox(
@@ -469,11 +492,12 @@ class _DayGrid extends StatelessWidget {
                   Container(
                     width: _hourWidth,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 10),
+                      horizontal: 6,
+                      vertical: 10,
+                    ),
                     decoration: const BoxDecoration(
                       border: BorderDirectional(
-                        start:
-                            BorderSide(color: AppColors.border, width: 1),
+                        start: BorderSide(color: AppColors.border, width: 1),
                       ),
                     ),
                     child: Text(
@@ -481,7 +505,8 @@ class _DayGrid extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: TimeUtil.isSameDay(day, DateTime.now()) &&
+                        color:
+                            TimeUtil.isSameDay(day, DateTime.now()) &&
                                 DateTime.now().hour == hour
                             ? AppColors.accent
                             : AppColors.textPrimary,
@@ -523,20 +548,26 @@ class _StationTimelineRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dayEnd = day.add(const Duration(days: 1));
-    final dayShifts = shifts
-        .where((s) =>
-            s.stationId == station.id &&
-            s.start.isBefore(dayEnd) &&
-            s.end.isAfter(day))
-        .toList()
-      ..sort((a, b) => a.start.compareTo(b.start));
+    final dayShifts =
+        shifts
+            .where(
+              (s) =>
+                  s.stationId == station.id &&
+                  s.start.isBefore(dayEnd) &&
+                  s.end.isAfter(day),
+            )
+            .toList()
+          ..sort((a, b) => a.start.compareTo(b.start));
     final lanes = _assignLanes(dayShifts);
-    final laneCount =
-        lanes.isEmpty ? 1 : lanes.reduce((a, b) => a > b ? a : b) + 1;
+    final laneCount = lanes.isEmpty
+        ? 1
+        : lanes.reduce((a, b) => a > b ? a : b) + 1;
     // Explicit height: the row lives inside a vertically-unbounded scroll
     // view, so a stretch Row without a bounded height cannot lay out.
     final contentHeight = laneCount * laneHeight + 4;
-    final rowHeight = contentHeight < _minRowHeight ? _minRowHeight : contentHeight;
+    final rowHeight = contentHeight < _minRowHeight
+        ? _minRowHeight
+        : contentHeight;
     final now = DateTime.now();
 
     return Container(
@@ -554,10 +585,12 @@ class _StationTimelineRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(station.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(
+                    station.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   Text(
                     station.isAroundTheClock
                         ? AppLocalizations.of(context)!.twentyFourSeven
@@ -586,7 +619,9 @@ class _StationTimelineRow extends StatelessWidget {
                           decoration: const BoxDecoration(
                             border: BorderDirectional(
                               start: BorderSide(
-                                  color: AppColors.border, width: 1),
+                                color: AppColors.border,
+                                width: 1,
+                              ),
                             ),
                           ),
                           child: InkWell(
@@ -607,23 +642,23 @@ class _StationTimelineRow extends StatelessWidget {
                   for (final window in station.activeWindows)
                     PositionedDirectional(
                       start: window.startMinutes * hourWidth / 60,
-                      width: (window.endMinutes - window.startMinutes) *
+                      width:
+                          (window.endMinutes - window.startMinutes) *
                           hourWidth /
                           60,
                       top: 0,
                       bottom: 0,
                       child: IgnorePointer(
                         child: Container(
-                            color:
-                                AppColors.accent.withValues(alpha: 0.06)),
+                          color: AppColors.accent.withValues(alpha: 0.06),
+                        ),
                       ),
                     ),
                 for (var i = 0; i < dayShifts.length; i++)
                   _positionedChip(dayShifts[i], lanes[i], dayEnd),
                 if (TimeUtil.isSameDay(day, now))
                   PositionedDirectional(
-                    start:
-                        (now.hour * 60 + now.minute) * hourWidth / 60 - 1,
+                    start: (now.hour * 60 + now.minute) * hourWidth / 60 - 1,
                     width: 2,
                     top: 0,
                     bottom: 0,
@@ -689,11 +724,14 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dayShifts = shifts
-        .where((s) =>
-            s.stationId == station.id && TimeUtil.isSameDay(s.start, day))
-        .toList()
-      ..sort((a, b) => a.start.compareTo(b.start));
+    final dayShifts =
+        shifts
+            .where(
+              (s) =>
+                  s.stationId == station.id && TimeUtil.isSameDay(s.start, day),
+            )
+            .toList()
+          ..sort((a, b) => a.start.compareTo(b.start));
     return Padding(
       padding: const EdgeInsets.all(6),
       child: Column(
@@ -738,8 +776,8 @@ class _ShiftChip extends StatelessWidget {
     final assignee = shift.userId == null
         ? null
         : shiftsManager.employees
-            .where((u) => u.id == shift.userId)
-            .firstOrNull;
+              .where((u) => u.id == shift.userId)
+              .firstOrNull;
     final needsHealing = assignee != null && !assignee.isAvailable;
 
     return DragTarget<AppUser>(
@@ -749,12 +787,14 @@ class _ShiftChip extends StatelessWidget {
         final success = await shiftsManager.assignShift(
           shift.id,
           details.data.id,
-          source:
-              needsHealing ? ShiftSource.healing : ShiftSource.manual,
+          source: needsHealing ? ShiftSource.healing : ShiftSource.manual,
         );
         if (!success && context.mounted) {
-          SnackBarUtil.showSnackBar(context,
-              AppLocalizations.of(context)!.assignmentFailed, Variant.ERROR);
+          SnackBarUtil.showSnackBar(
+            context,
+            AppLocalizations.of(context)!.assignmentFailed,
+            Variant.ERROR,
+          );
         }
       },
       builder: (context, candidates, rejected) {
@@ -783,8 +823,7 @@ class _ShiftChip extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 4),
             // Modest padding + tight line height: the chip must fit the
             // fixed timeline lane even with the drag-over 2px border.
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: background,
               borderRadius: BorderRadius.circular(6),
@@ -816,26 +855,32 @@ class _ShiftChip extends StatelessWidget {
                         assignee?.displayName ??
                             (shift.isAssigned
                                 ? shift.userId!
-                                : AppLocalizations.of(context)!
-                                    .openShiftShort),
+                                : AppLocalizations.of(context)!.openShiftShort),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 11,
-                            height: 1.25,
-                            color: foreground),
+                          fontSize: 11,
+                          height: 1.25,
+                          color: foreground,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 if (needsHealing)
-                  const Icon(Icons.priority_high,
-                      size: 14, color: AppColors.danger)
+                  const Icon(
+                    Icons.priority_high,
+                    size: 14,
+                    color: AppColors.danger,
+                  )
                 // Acknowledgement loop: green check once the assignee has
                 // confirmed the latest change.
                 else if (shift.isAssigned && shift.acknowledged)
-                  const Icon(Icons.check_circle,
-                      size: 14, color: AppColors.success),
+                  const Icon(
+                    Icons.check_circle,
+                    size: 14,
+                    color: AppColors.success,
+                  ),
               ],
             ),
           ),
@@ -845,7 +890,10 @@ class _ShiftChip extends StatelessWidget {
   }
 
   void _showActions(
-      BuildContext context, AppUser? assignee, bool needsHealing) {
+    BuildContext context,
+    AppUser? assignee,
+    bool needsHealing,
+  ) {
     final shiftsManager = locator<ShiftsManager>();
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
@@ -861,22 +909,27 @@ class _ShiftChip extends StatelessWidget {
                 '${TimeUtil.formatRange(shift.start, shift.end)}',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
-              subtitle: Text(assignee == null
-                  ? l10n.openShift
-                  : '${l10n.assignedTo(assignee.displayName)}'
-                      '${needsHealing ? ' (${L10nUtil.statusLabel(l10n, assignee.status)}!)' : ''}'
-                      ' · ${shift.acknowledged ? l10n.acknowledgedCheck : l10n.notAcknowledgedYet}'),
+              subtitle: Text(
+                assignee == null
+                    ? l10n.openShift
+                    : '${l10n.assignedTo(assignee.displayName)}'
+                          '${needsHealing ? ' (${L10nUtil.statusLabel(l10n, assignee.status)}!)' : ''}'
+                          ' · ${shift.acknowledged ? l10n.acknowledgedCheck : l10n.notAcknowledgedYet}',
+              ),
             ),
             const Divider(height: 1),
             if (needsHealing)
               ListTile(
-                leading:
-                    const Icon(Icons.healing, color: AppColors.danger),
+                leading: const Icon(Icons.healing, color: AppColors.danger),
                 title: Text(l10n.findReplacementAi),
                 onTap: () {
                   Navigator.pop(sheetContext);
-                  AssignSheet.show(context,
-                      shift: shift, station: station, healing: true);
+                  AssignSheet.show(
+                    context,
+                    shift: shift,
+                    station: station,
+                    healing: true,
+                  );
                 },
               ),
             ListTile(
@@ -892,8 +945,12 @@ class _ShiftChip extends StatelessWidget {
               title: Text(l10n.editTimes),
               onTap: () {
                 Navigator.pop(sheetContext);
-                ShiftEditorDialog.show(context,
-                    station: station, day: day, shift: shift);
+                ShiftEditorDialog.show(
+                  context,
+                  station: station,
+                  day: day,
+                  shift: shift,
+                );
               },
             ),
             if (shift.isAssigned)
@@ -906,10 +963,14 @@ class _ShiftChip extends StatelessWidget {
                 },
               ),
             ListTile(
-              leading:
-                  const Icon(Icons.delete_outline, color: AppColors.danger),
-              title: Text(l10n.deleteShift,
-                  style: const TextStyle(color: AppColors.danger)),
+              leading: const Icon(
+                Icons.delete_outline,
+                color: AppColors.danger,
+              ),
+              title: Text(
+                l10n.deleteShift,
+                style: const TextStyle(color: AppColors.danger),
+              ),
               onTap: () async {
                 Navigator.pop(sheetContext);
                 await shiftsManager.deleteShift(shift.id);
@@ -944,15 +1005,20 @@ class _DayRequirementsBar extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 4),
           child: Row(
             children: [
-              const Icon(Icons.checklist_outlined,
-                  size: 16, color: AppColors.textSecondary),
+              const Icon(
+                Icons.checklist_outlined,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: requirements.isEmpty
                     ? Text(
                         l10n.noDayRequirements,
                         style: const TextStyle(
-                            fontSize: 12, color: AppColors.textSecondary),
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
                       )
                     : Wrap(
                         spacing: 6,
@@ -965,7 +1031,9 @@ class _DayRequirementsBar extends StatelessWidget {
                                       ?.name ??
                                   req.certificationId,
                               shiftsManager.certCoverageForDay(
-                                  req.certificationId, day),
+                                req.certificationId,
+                                day,
+                              ),
                               req.count,
                             ),
                         ],
@@ -997,8 +1065,7 @@ class _DayRequirementsBar extends StatelessWidget {
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color:
-              met ? AppColors.shiftCoveredText : AppColors.shiftCriticalText,
+          color: met ? AppColors.shiftCoveredText : AppColors.shiftCriticalText,
         ),
       ),
     );
@@ -1027,16 +1094,19 @@ class _TrainingTimelineRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dayEnd = day.add(const Duration(days: 1));
-    final daySessions = sessions
-        .where((s) => s.start.isBefore(dayEnd) && s.end.isAfter(day))
-        .toList()
-      ..sort((a, b) => a.start.compareTo(b.start));
+    final daySessions =
+        sessions
+            .where((s) => s.start.isBefore(dayEnd) && s.end.isAfter(day))
+            .toList()
+          ..sort((a, b) => a.start.compareTo(b.start));
     final lanes = _assignLanes(daySessions);
-    final laneCount =
-        lanes.isEmpty ? 1 : lanes.reduce((a, b) => a > b ? a : b) + 1;
+    final laneCount = lanes.isEmpty
+        ? 1
+        : lanes.reduce((a, b) => a > b ? a : b) + 1;
     final contentHeight = laneCount * laneHeight + 4;
-    final rowHeight =
-        contentHeight < _minRowHeight ? _minRowHeight : contentHeight;
+    final rowHeight = contentHeight < _minRowHeight
+        ? _minRowHeight
+        : contentHeight;
 
     return Container(
       height: rowHeight,
@@ -1053,8 +1123,11 @@ class _TrainingTimelineRow extends StatelessWidget {
               padding: const EdgeInsets.all(10),
               child: Row(
                 children: [
-                  const Icon(Icons.school_outlined,
-                      size: 16, color: AppColors.trainingText),
+                  const Icon(
+                    Icons.school_outlined,
+                    size: 16,
+                    color: AppColors.trainingText,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -1084,7 +1157,9 @@ class _TrainingTimelineRow extends StatelessWidget {
                           decoration: const BoxDecoration(
                             border: BorderDirectional(
                               start: BorderSide(
-                                  color: AppColors.border, width: 1),
+                                color: AppColors.border,
+                                width: 1,
+                              ),
                             ),
                           ),
                           child: InkWell(
@@ -1151,20 +1226,18 @@ class _TrainingDayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final daySessions = sessions
-        .where((s) => TimeUtil.isSameDay(s.start, day))
-        .toList()
-      ..sort((a, b) {
-        final byPriority = b.priority.compareTo(a.priority);
-        return byPriority != 0 ? byPriority : a.start.compareTo(b.start);
-      });
+    final daySessions =
+        sessions.where((s) => TimeUtil.isSameDay(s.start, day)).toList()
+          ..sort((a, b) {
+            final byPriority = b.priority.compareTo(a.priority);
+            return byPriority != 0 ? byPriority : a.start.compareTo(b.start);
+          });
     return Padding(
       padding: const EdgeInsets.all(6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final session in daySessions)
-            _TrainingChip(session: session),
+          for (final session in daySessions) _TrainingChip(session: session),
           SizedBox(
             height: 24,
             child: InkWell(
@@ -1195,12 +1268,12 @@ class _TrainingChip extends StatelessWidget {
     final shiftsManager = locator<ShiftsManager>();
     final certName =
         stationsManager.certificationById(session.certificationId)?.name ??
-            session.certificationId;
+        session.certificationId;
     final trainee = session.traineeId == null
         ? null
         : shiftsManager.employees
-            .where((u) => u.id == session.traineeId)
-            .firstOrNull;
+              .where((u) => u.id == session.traineeId)
+              .firstOrNull;
     return InkWell(
       borderRadius: BorderRadius.circular(6),
       onTap: () => _showActions(context),
@@ -1239,16 +1312,16 @@ class _TrainingChip extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontSize: 11,
-                        height: 1.25,
-                        color: AppColors.trainingText),
+                      fontSize: 11,
+                      height: 1.25,
+                      color: AppColors.trainingText,
+                    ),
                   ),
                 ],
               ),
             ),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
               decoration: BoxDecoration(
                 color: AppColors.training,
                 borderRadius: BorderRadius.circular(8),
@@ -1275,7 +1348,7 @@ class _TrainingChip extends StatelessWidget {
     final shiftsManager = locator<ShiftsManager>();
     final certName =
         stationsManager.certificationById(session.certificationId)?.name ??
-            session.certificationId;
+        session.certificationId;
     final names = {
       for (final user in shiftsManager.employees) user.id: user.displayName,
     };
@@ -1317,10 +1390,14 @@ class _TrainingChip extends StatelessWidget {
               },
             ),
             ListTile(
-              leading:
-                  const Icon(Icons.delete_outline, color: AppColors.danger),
-              title: Text(l10n.deleteTrainingSession,
-                  style: const TextStyle(color: AppColors.danger)),
+              leading: const Icon(
+                Icons.delete_outline,
+                color: AppColors.danger,
+              ),
+              title: Text(
+                l10n.deleteTrainingSession,
+                style: const TextStyle(color: AppColors.danger),
+              ),
               onTap: () async {
                 Navigator.pop(sheetContext);
                 await trainingManager.deleteSession(session.id);

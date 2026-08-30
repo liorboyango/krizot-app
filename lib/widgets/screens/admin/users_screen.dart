@@ -10,6 +10,7 @@ import '../../../entities/cert_requirement.dart';
 import '../../../entities/certification.dart';
 import '../../../entities/shift.dart';
 import '../../../managers/availability_manager.dart';
+import '../../../managers/org_filter_manager.dart';
 import '../../../managers/shifts_manager.dart';
 import '../../../managers/stations_manager.dart';
 import '../../../managers/user_manager.dart';
@@ -43,22 +44,8 @@ enum _StaffView { list, calendar }
 class _UsersScreenState extends State<UsersScreen> {
   _StaffView view = _StaffView.list;
 
-  /// Unit filter — null shows every site.
-  Site? siteFilter;
-
-  /// Department → still-included roles ("checkboxes of Department and
-  /// deeper to Role"). Everything starts checked.
-  final Map<Department, Set<JobRole>> selectedRoles = {
-    for (final department in Department.values)
-      department: {...JobRole.values},
-  };
-
-  bool _visible(AppUser user) {
-    if (siteFilter != null && user.site != siteFilter) return false;
-    // Users without a full placement stay visible under "Unassigned".
-    if (user.department == null || user.jobRole == null) return true;
-    return selectedRoles[user.department]!.contains(user.jobRole);
-  }
+  /// The dashboard-wide unit/department/role filter from the sidebar.
+  final orgFilter = locator<OrgFilterManager>();
 
   Future<void> onAutoFillPressed() async {
     final l10n = AppLocalizations.of(context)!;
@@ -99,11 +86,13 @@ class _UsersScreenState extends State<UsersScreen> {
                 SegmentedButton<_StaffView>(
                   segments: [
                     ButtonSegment(
-                        value: _StaffView.list,
-                        label: Text(l10n.listViewLabel)),
+                      value: _StaffView.list,
+                      label: Text(l10n.listViewLabel),
+                    ),
                     ButtonSegment(
-                        value: _StaffView.calendar,
-                        label: Text(l10n.calendarViewLabel)),
+                      value: _StaffView.calendar,
+                      label: Text(l10n.calendarViewLabel),
+                    ),
                   ],
                   selected: {view},
                   onSelectionChanged: (selection) =>
@@ -130,25 +119,27 @@ class _UsersScreenState extends State<UsersScreen> {
               ],
             ),
           ),
-          _filterBar(l10n),
           Expanded(
-            child: StreamBuilder<List<AppUser>>(
-              initialData: shiftsManager.employees,
-              stream: shiftsManager.employeesStream,
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final users = snapshot.data!;
-                if (users.isEmpty) {
-                  return Center(child: Text(l10n.noStaffYet));
-                }
-                final visible = users.where(_visible).toList();
-                if (view == _StaffView.calendar) {
-                  return _StaffCalendarView(users: _sectionOrder(visible));
-                }
-                return _buildList(l10n, visible);
-              },
+            child: StreamBuilder<void>(
+              stream: orgFilter.changesStream,
+              builder: (context, _) => StreamBuilder<List<AppUser>>(
+                initialData: shiftsManager.employees,
+                stream: shiftsManager.employeesStream,
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final users = snapshot.data!;
+                  if (users.isEmpty) {
+                    return Center(child: Text(l10n.noStaffYet));
+                  }
+                  final visible = users.where(orgFilter.matchesUser).toList();
+                  if (view == _StaffView.calendar) {
+                    return _StaffCalendarView(users: _sectionOrder(visible));
+                  }
+                  return _buildList(l10n, visible);
+                },
+              ),
             ),
           ),
         ],
@@ -158,100 +149,17 @@ class _UsersScreenState extends State<UsersScreen> {
 
   /// Department → role order used by both the list sections and the
   /// calendar rows; unassigned users sink to the end.
-  static List<AppUser> _sectionOrder(List<AppUser> users) => [...users]..sort(
-      (a, b) {
+  static List<AppUser> _sectionOrder(List<AppUser> users) =>
+      [...users]..sort((a, b) {
         final byDept = (a.department?.index ?? Department.values.length)
             .compareTo(b.department?.index ?? Department.values.length);
         if (byDept != 0) return byDept;
-        final byRole = (a.jobRole?.index ?? JobRole.values.length)
-            .compareTo(b.jobRole?.index ?? JobRole.values.length);
+        final byRole = (a.jobRole?.index ?? JobRole.values.length).compareTo(
+          b.jobRole?.index ?? JobRole.values.length,
+        );
         if (byRole != 0) return byRole;
         return a.displayName.compareTo(b.displayName);
-      },
-    );
-
-  Widget _filterBar(AppLocalizations l10n) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-      child: Wrap(
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 20,
-        runSpacing: 4,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('${l10n.unitLabel}:',
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600)),
-              const SizedBox(width: 8),
-              SegmentedButton<Site?>(
-                segments: [
-                  ButtonSegment<Site?>(
-                      value: null, label: Text(l10n.allUnits)),
-                  for (final site in Site.values)
-                    ButtonSegment<Site?>(
-                        value: site, label: Text(site.wireName)),
-                ],
-                selected: {siteFilter},
-                onSelectionChanged: (selection) =>
-                    setState(() => siteFilter = selection.first),
-                showSelectedIcon: false,
-                style: const ButtonStyle(
-                  visualDensity: VisualDensity.compact,
-                ),
-              ),
-            ],
-          ),
-          for (final department in Department.values)
-            _departmentFilter(l10n, department),
-        ],
-      ),
-    );
-  }
-
-  /// One department's checkbox with its role checkboxes nested after it.
-  Widget _departmentFilter(AppLocalizations l10n, Department department) {
-    final selected = selectedRoles[department]!;
-    final allSelected = selected.length == JobRole.values.length;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Checkbox(
-          tristate: true,
-          value: allSelected ? true : (selected.isEmpty ? false : null),
-          visualDensity: VisualDensity.compact,
-          onChanged: (_) => setState(() {
-            if (allSelected) {
-              selected.clear();
-            } else {
-              selected.addAll(JobRole.values);
-            }
-          }),
-        ),
-        Text(L10nUtil.departmentLabel(l10n, department),
-            style:
-                const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-        const SizedBox(width: 4),
-        for (final jobRole in JobRole.values) ...[
-          Checkbox(
-            value: selected.contains(jobRole),
-            visualDensity: VisualDensity.compact,
-            onChanged: (checked) => setState(() {
-              if (checked == true) {
-                selected.add(jobRole);
-              } else {
-                selected.remove(jobRole);
-              }
-            }),
-          ),
-          Text(L10nUtil.jobRoleLabel(l10n, jobRole),
-              style: const TextStyle(
-                  fontSize: 12, color: AppColors.textSecondary)),
-        ],
-      ],
-    );
-  }
+      });
 
   /// The list view: sections per department, subsections per role, and an
   /// "Unassigned" tail for users without a full placement.
@@ -261,24 +169,23 @@ class _UsersScreenState extends State<UsersScreen> {
     }
     final children = <Widget>[];
     void addGroup(List<AppUser> group) => children.addAll([
-          for (final user in group)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _UserTile(user: user),
-            ),
-        ]);
+      for (final user in group)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: _UserTile(user: user),
+        ),
+    ]);
 
     for (final department in Department.values) {
-      final inDepartment =
-          visible.where((u) => u.department == department).toList();
+      final inDepartment = visible
+          .where((u) => u.department == department)
+          .toList();
       if (inDepartment.isEmpty) continue;
-      children.add(_sectionHeader(
-          L10nUtil.departmentLabel(l10n, department),
-          major: true));
+      children.add(
+        _sectionHeader(L10nUtil.departmentLabel(l10n, department), major: true),
+      );
       for (final jobRole in JobRole.values) {
-        final group = inDepartment
-            .where((u) => u.jobRole == jobRole)
-            .toList()
+        final group = inDepartment.where((u) => u.jobRole == jobRole).toList()
           ..sort((a, b) => a.displayName.compareTo(b.displayName));
         if (group.isEmpty) continue;
         children.add(_sectionHeader(L10nUtil.jobRoleLabel(l10n, jobRole)));
@@ -304,16 +211,16 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   Widget _sectionHeader(String title, {bool major = false}) => Padding(
-        padding: EdgeInsets.only(top: major ? 12 : 4, bottom: 6),
-        child: Text(
-          title,
-          style: TextStyle(
-            fontSize: major ? 16 : 13,
-            fontWeight: FontWeight.w700,
-            color: major ? AppColors.textPrimary : AppColors.textSecondary,
-          ),
-        ),
-      );
+    padding: EdgeInsets.only(top: major ? 12 : 4, bottom: 6),
+    child: Text(
+      title,
+      style: TextStyle(
+        fontSize: major ? 16 : 13,
+        fontWeight: FontWeight.w700,
+        color: major ? AppColors.textPrimary : AppColors.textSecondary,
+      ),
+    ),
+  );
 }
 
 /// The calendar view: one row per user, one column per day of the selected
@@ -359,8 +266,7 @@ class _StaffCalendarView extends StatelessWidget {
                             onPressed: shiftsManager.previousWeek,
                           ),
                           Text(
-                            l10n.weekOf(
-                                TimeUtil.formatDayLabel(days.first)),
+                            l10n.weekOf(TimeUtil.formatDayLabel(days.first)),
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,
@@ -389,26 +295,28 @@ class _StaffCalendarView extends StatelessWidget {
                             child: Padding(
                               padding: const EdgeInsets.all(8),
                               child: Table(
-                                defaultColumnWidth:
-                                    const FixedColumnWidth(150),
-                                columnWidths: const {
-                                  0: FixedColumnWidth(170)
-                                },
+                                defaultColumnWidth: const FixedColumnWidth(150),
+                                columnWidths: const {0: FixedColumnWidth(170)},
                                 border: TableBorder.all(
-                                    color: AppColors.border, width: 1),
+                                  color: AppColors.border,
+                                  width: 1,
+                                ),
                                 defaultVerticalAlignment:
                                     TableCellVerticalAlignment.top,
                                 children: [
                                   TableRow(
                                     decoration: const BoxDecoration(
-                                        color: AppColors.tableHeader),
+                                      color: AppColors.tableHeader,
+                                    ),
                                     children: [
                                       Padding(
                                         padding: const EdgeInsets.all(10),
-                                        child: Text(l10n.staffColumn,
-                                            style: const TextStyle(
-                                                fontWeight:
-                                                    FontWeight.w700)),
+                                        child: Text(
+                                          l10n.staffColumn,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
                                       ),
                                       for (final day in days)
                                         Padding(
@@ -417,8 +325,11 @@ class _StaffCalendarView extends StatelessWidget {
                                             TimeUtil.formatDayLabel(day),
                                             style: TextStyle(
                                               fontWeight: FontWeight.w700,
-                                              color: TimeUtil.isSameDay(
-                                                      day, DateTime.now())
+                                              color:
+                                                  TimeUtil.isSameDay(
+                                                    day,
+                                                    DateTime.now(),
+                                                  )
                                                   ? AppColors.accent
                                                   : AppColors.textPrimary,
                                             ),
@@ -431,8 +342,13 @@ class _StaffCalendarView extends StatelessWidget {
                                       children: [
                                         _nameCell(context, l10n, user),
                                         for (final day in days)
-                                          _dayCell(context, user, day,
-                                              windows, shifts),
+                                          _dayCell(
+                                            context,
+                                            user,
+                                            day,
+                                            windows,
+                                            shifts,
+                                          ),
                                       ],
                                     ),
                                 ],
@@ -466,17 +382,21 @@ class _StaffCalendarView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(user.displayName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              user.displayName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             if (placement.isNotEmpty)
               Text(
                 placement,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    fontSize: 11, color: AppColors.textSecondary),
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
               ),
           ],
         ),
@@ -493,17 +413,21 @@ class _StaffCalendarView extends StatelessWidget {
   ) {
     final stationsManager = locator<StationsManager>();
     final dayEnd = day.add(const Duration(days: 1));
-    final userWindows = windows
-        .where((w) => w.userId == user.id && w.overlaps(day, dayEnd))
-        .toList()
-      ..sort((a, b) => a.start.compareTo(b.start));
-    final userShifts = shifts
-        .where((s) =>
-            s.userId == user.id &&
-            s.start.isBefore(dayEnd) &&
-            s.end.isAfter(day))
-        .toList()
-      ..sort((a, b) => a.start.compareTo(b.start));
+    final userWindows =
+        windows
+            .where((w) => w.userId == user.id && w.overlaps(day, dayEnd))
+            .toList()
+          ..sort((a, b) => a.start.compareTo(b.start));
+    final userShifts =
+        shifts
+            .where(
+              (s) =>
+                  s.userId == user.id &&
+                  s.start.isBefore(dayEnd) &&
+                  s.end.isAfter(day),
+            )
+            .toList()
+          ..sort((a, b) => a.start.compareTo(b.start));
     return InkWell(
       onTap: () => UserAvailabilityDialog.show(context, user),
       child: Padding(
@@ -520,7 +444,8 @@ class _StaffCalendarView extends StatelessWidget {
               ),
             for (final shift in userShifts)
               _cellChip(
-                text: '${TimeUtil.formatRange(shift.start, shift.end)} '
+                text:
+                    '${TimeUtil.formatRange(shift.start, shift.end)} '
                     '${stationsManager.stationById(shift.stationId)?.name ?? shift.stationId}',
                 background: AppColors.accent.withValues(alpha: 0.12),
                 foreground: AppColors.accent,
@@ -535,7 +460,11 @@ class _StaffCalendarView extends StatelessWidget {
   }
 
   static String _clampedRange(
-      DateTime start, DateTime end, DateTime day, DateTime dayEnd) {
+    DateTime start,
+    DateTime end,
+    DateTime day,
+    DateTime dayEnd,
+  ) {
     final startsToday = !start.isBefore(day);
     final endsToday = !end.isAfter(dayEnd);
     if (startsToday && endsToday) return TimeUtil.formatRange(start, end);
@@ -549,33 +478,32 @@ class _StaffCalendarView extends StatelessWidget {
     required Color background,
     required Color foreground,
     required IconData icon,
-  }) =>
-      Container(
-        margin: const EdgeInsets.only(bottom: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 12, color: foreground),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: foreground,
-                ),
-              ),
+  }) => Container(
+    margin: const EdgeInsets.only(bottom: 3),
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+    decoration: BoxDecoration(
+      color: background,
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Row(
+      children: [
+        Icon(icon, size: 12, color: foreground),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: foreground,
             ),
-          ],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 }
 
 class _UserTile extends StatelessWidget {
@@ -599,17 +527,19 @@ class _UserTile extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         leading: Stack(
           children: [
             CircleAvatar(
-              backgroundImage:
-                  user.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
+              backgroundImage: user.photoUrl != null
+                  ? NetworkImage(user.photoUrl!)
+                  : null,
               child: user.photoUrl == null
-                  ? Text(user.displayName.isNotEmpty
-                      ? user.displayName[0].toUpperCase()
-                      : '?')
+                  ? Text(
+                      user.displayName.isNotEmpty
+                          ? user.displayName[0].toUpperCase()
+                          : '?',
+                    )
                   : null,
             ),
             Positioned(
@@ -629,8 +559,10 @@ class _UserTile extends StatelessWidget {
         ),
         title: Row(
           children: [
-            Text(user.displayName,
-                style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              user.displayName,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -646,8 +578,7 @@ class _UserTile extends StatelessWidget {
             if (user.site != null) ...[
               const SizedBox(width: 6),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.textSecondary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
@@ -655,15 +586,16 @@ class _UserTile extends StatelessWidget {
                 child: Text(
                   '${l10n.unitLabel} ${user.site!.wireName}',
                   style: const TextStyle(
-                      fontSize: 11, color: AppColors.textSecondary),
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
             ],
             if (user.courseNumber != null) ...[
               const SizedBox(width: 6),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.training,
                   borderRadius: BorderRadius.circular(10),
@@ -671,7 +603,9 @@ class _UserTile extends StatelessWidget {
                 child: Text(
                   l10n.courseTag(user.courseNumber!),
                   style: const TextStyle(
-                      fontSize: 11, color: AppColors.trainingText),
+                    fontSize: 11,
+                    color: AppColors.trainingText,
+                  ),
                 ),
               ),
             ],
@@ -720,10 +654,10 @@ class _UserEditorDialog extends StatefulWidget {
   const _UserEditorDialog({required this.user});
 
   static Future<void> show(BuildContext context, AppUser user) => showDialog(
-        context: context,
-        routeSettings: const RouteSettings(name: 'user_editor_dialog'),
-        builder: (_) => _UserEditorDialog(user: user),
-      );
+    context: context,
+    routeSettings: const RouteSettings(name: 'user_editor_dialog'),
+    builder: (_) => _UserEditorDialog(user: user),
+  );
 
   @override
   State<_UserEditorDialog> createState() => _UserEditorDialogState();
@@ -738,7 +672,8 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
   late Department? department = widget.user.department;
   late JobRole? jobRole = widget.user.jobRole;
   late final courseController = TextEditingController(
-      text: widget.user.courseNumber?.toString() ?? '');
+    text: widget.user.courseNumber?.toString() ?? '',
+  );
   bool isBusy = false;
 
   @override
@@ -750,14 +685,14 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
   int? get _courseNumber => int.tryParse(courseController.text.trim());
 
   void _toggleCert(String certId, bool selected) => setState(() {
-        if (selected) {
-          certIds.add(certId);
-          certTimes.putIfAbsent(certId, () => DateTime.now());
-        } else {
-          certIds.remove(certId);
-          certTimes.remove(certId);
-        }
-      });
+    if (selected) {
+      certIds.add(certId);
+      certTimes.putIfAbsent(certId, () => DateTime.now());
+    } else {
+      certIds.remove(certId);
+      certTimes.remove(certId);
+    }
+  });
 
   Future<void> _pickEarnedDate(String certId) async {
     final picked = await showDatePicker(
@@ -783,37 +718,50 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
       ((certification.site == null || certification.site == site) &&
           (certification.department == null ||
               certification.department == department) &&
-          (certification.jobRole == null ||
-              certification.jobRole == jobRole));
+          (certification.jobRole == null || certification.jobRole == jobRole));
 
   Future<void> onSavePressed() async {
     setState(() => isBusy = true);
     final userService = locator<UserService>();
     certTimes.removeWhere((certId, _) => !certIds.contains(certId));
     var success = await userService.updateCertifications(
-        widget.user.id, certIds.toList(), certTimes);
+      widget.user.id,
+      certIds.toList(),
+      certTimes,
+    );
     if (success && _courseNumber != widget.user.courseNumber) {
-      success =
-          await userService.updateCourseNumber(widget.user.id, _courseNumber);
+      success = await userService.updateCourseNumber(
+        widget.user.id,
+        _courseNumber,
+      );
     }
     if (success && _orgChanged) {
-      success = await userService.updateOrgAssignment(widget.user.id,
-          site: site, department: department, jobRole: jobRole);
+      success = await userService.updateOrgAssignment(
+        widget.user.id,
+        site: site,
+        department: department,
+        jobRole: jobRole,
+      );
     }
     if (success && status != widget.user.status) {
       success = await userService.updateStatus(widget.user.id, status);
     }
     if (success && role != widget.user.role) {
-      success = await locator<FunctionsService>()
-          .setUserRole(widget.user.id, role.name);
+      success = await locator<FunctionsService>().setUserRole(
+        widget.user.id,
+        role.name,
+      );
     }
     if (!mounted) return;
     setState(() => isBusy = false);
     if (success) {
       Navigator.pop(context);
     } else {
-      SnackBarUtil.showSnackBar(context,
-          AppLocalizations.of(context)!.failedToSaveChanges, Variant.ERROR);
+      SnackBarUtil.showSnackBar(
+        context,
+        AppLocalizations.of(context)!.failedToSaveChanges,
+        Variant.ERROR,
+      );
     }
   }
 
@@ -831,27 +779,35 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l10n.availabilityLabel,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                l10n.availabilityLabel,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 8),
               SegmentedButton<UserStatus>(
                 segments: [
                   ButtonSegment(
-                      value: UserStatus.available,
-                      label: Text(l10n.statusAvailable)),
+                    value: UserStatus.available,
+                    label: Text(l10n.statusAvailable),
+                  ),
                   ButtonSegment(
-                      value: UserStatus.sick, label: Text(l10n.statusSick)),
+                    value: UserStatus.sick,
+                    label: Text(l10n.statusSick),
+                  ),
                   ButtonSegment(
-                      value: UserStatus.unavailable,
-                      label: Text(l10n.statusUnavailable)),
+                    value: UserStatus.unavailable,
+                    label: Text(l10n.statusUnavailable),
+                  ),
                 ],
                 selected: {status},
                 onSelectionChanged: (selection) =>
                     setState(() => status = selection.first),
               ),
               const SizedBox(height: 16),
-              Text(l10n.orgPlacementTitle,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                l10n.orgPlacementTitle,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 8),
               OrgScopePicker(
                 site: site,
@@ -873,8 +829,10 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text(l10n.certificationsTitle,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                l10n.certificationsTitle,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 8),
               StreamBuilder<List<Certification>>(
                 initialData: stationsManager.certifications,
@@ -888,7 +846,9 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                     return Text(
                       l10n.noCertificationsInCatalog,
                       style: const TextStyle(
-                          color: AppColors.textSecondary, fontSize: 13),
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
                     );
                   }
                   return Column(
@@ -919,14 +879,17 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                                     '${certification.name} — '
                                     '${certTimes[certification.id] == null ? '—' : l10n.earnedOnDate(DateFormat('d MMM yyyy').format(certTimes[certification.id]!))}',
                                     style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.textSecondary),
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary,
+                                    ),
                                   ),
                                 ),
                                 IconButton(
                                   visualDensity: VisualDensity.compact,
-                                  icon: const Icon(Icons.edit_calendar_outlined,
-                                      size: 16),
+                                  icon: const Icon(
+                                    Icons.edit_calendar_outlined,
+                                    size: 16,
+                                  ),
                                   onPressed: () =>
                                       _pickEarnedDate(certification.id),
                                 ),
@@ -939,19 +902,21 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
               ),
               if (isAdmin) ...[
                 const SizedBox(height: 16),
-                Text(l10n.roleLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  l10n.roleLabel,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<UserRole>(
                   initialValue: role,
                   items: [
                     for (final value in UserRole.values)
                       DropdownMenuItem(
-                          value: value,
-                          child: Text(L10nUtil.roleLabel(l10n, value))),
+                        value: value,
+                        child: Text(L10nUtil.roleLabel(l10n, value)),
+                      ),
                   ],
-                  onChanged: (value) =>
-                      setState(() => role = value ?? role),
+                  onChanged: (value) => setState(() => role = value ?? role),
                 ),
               ],
             ],
@@ -977,11 +942,10 @@ class _CertificationCatalogDialog extends StatefulWidget {
   const _CertificationCatalogDialog();
 
   static Future<void> show(BuildContext context) => showDialog(
-        context: context,
-        routeSettings:
-            const RouteSettings(name: 'certification_catalog_dialog'),
-        builder: (_) => const _CertificationCatalogDialog(),
-      );
+    context: context,
+    routeSettings: const RouteSettings(name: 'certification_catalog_dialog'),
+    builder: (_) => const _CertificationCatalogDialog(),
+  );
 
   @override
   State<_CertificationCatalogDialog> createState() =>
@@ -1001,14 +965,16 @@ class _CertificationCatalogDialogState
   Future<void> onAddPressed() async {
     final name = nameController.text.trim();
     if (name.isEmpty) return;
-    final id = await locator<StationsManager>()
-        .createCertification(Certification(id: '', name: name));
+    final id = await locator<StationsManager>().createCertification(
+      Certification(id: '', name: name),
+    );
     if (!mounted) return;
     if (id == null) {
       SnackBarUtil.showSnackBar(
-          context,
-          AppLocalizations.of(context)!.failedToAddCertification,
-          Variant.ERROR);
+        context,
+        AppLocalizations.of(context)!.failedToAddCertification,
+        Variant.ERROR,
+      );
     } else {
       nameController.clear();
     }
@@ -1064,27 +1030,35 @@ class _CertificationCatalogDialogState
                         ListTile(
                           dense: true,
                           title: Text(certification.name),
-                          subtitle: Text([
-                            '${l10n.certLevelLabel} ${certification.level}',
-                            ?OrgScopePicker.scopeLabel(l10n,
+                          subtitle: Text(
+                            [
+                              '${l10n.certLevelLabel} ${certification.level}',
+                              ?OrgScopePicker.scopeLabel(
+                                l10n,
                                 site: certification.site,
                                 department: certification.department,
-                                jobRole: certification.jobRole),
-                          ].join(' · ')),
+                                jobRole: certification.jobRole,
+                              ),
+                            ].join(' · '),
+                          ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
                                 tooltip: l10n.editCertification,
-                                icon: const Icon(Icons.edit_outlined,
-                                    size: 18),
+                                icon: const Icon(Icons.edit_outlined, size: 18),
                                 onPressed: () =>
                                     _CertificationEditorDialog.show(
-                                        context, certification),
+                                      context,
+                                      certification,
+                                    ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline,
-                                    size: 18, color: AppColors.danger),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 18,
+                                  color: AppColors.danger,
+                                ),
                                 onPressed: () => stationsManager
                                     .deleteCertification(certification.id),
                               ),
@@ -1116,8 +1090,7 @@ class _CertificationEditorDialog extends StatefulWidget {
 
   const _CertificationEditorDialog({required this.certification});
 
-  static Future<void> show(
-          BuildContext context, Certification certification) =>
+  static Future<void> show(BuildContext context, Certification certification) =>
       showDialog(
         context: context,
         routeSettings: const RouteSettings(name: 'certification_editor_dialog'),
@@ -1132,8 +1105,9 @@ class _CertificationEditorDialog extends StatefulWidget {
 
 class _CertificationEditorDialogState
     extends State<_CertificationEditorDialog> {
-  late final nameController =
-      TextEditingController(text: widget.certification.name);
+  late final nameController = TextEditingController(
+    text: widget.certification.name,
+  );
   late int level = widget.certification.level;
   late Site? site = widget.certification.site;
   late Department? department = widget.certification.department;
@@ -1167,8 +1141,7 @@ class _CertificationEditorDialogState
         simulationStaff: [
           for (final entry in staffCounts.entries)
             if (entry.value > 0)
-              CertRequirement(
-                  certificationId: entry.key, count: entry.value),
+              CertRequirement(certificationId: entry.key, count: entry.value),
         ],
         site: site,
         department: department,
@@ -1182,8 +1155,11 @@ class _CertificationEditorDialogState
     if (success) {
       Navigator.pop(context);
     } else {
-      SnackBarUtil.showSnackBar(context,
-          AppLocalizations.of(context)!.failedToSaveChanges, Variant.ERROR);
+      SnackBarUtil.showSnackBar(
+        context,
+        AppLocalizations.of(context)!.failedToSaveChanges,
+        Variant.ERROR,
+      );
     }
   }
 
@@ -1208,8 +1184,10 @@ class _CertificationEditorDialogState
                 ),
               ),
               const SizedBox(height: 16),
-              Text(l10n.orgPlacementTitle,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                l10n.orgPlacementTitle,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 8),
               OrgScopePicker(
                 site: site,
@@ -1223,8 +1201,10 @@ class _CertificationEditorDialogState
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Text(l10n.certLevelLabel,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(
+                    l10n.certLevelLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(width: 12),
                   IconButton(
                     visualDensity: VisualDensity.compact,
@@ -1233,8 +1213,10 @@ class _CertificationEditorDialogState
                         ? null
                         : () => setState(() => level--),
                   ),
-                  Text('$level',
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Text(
+                    '$level',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     icon: const Icon(Icons.add, size: 18),
@@ -1243,14 +1225,18 @@ class _CertificationEditorDialogState
                 ],
               ),
               const SizedBox(height: 12),
-              Text(l10n.simulationStaffTitle,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                l10n.simulationStaffTitle,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               Padding(
                 padding: const EdgeInsets.only(top: 2, bottom: 8),
                 child: Text(
                   l10n.simulationStaffHint,
                   style: const TextStyle(
-                      fontSize: 11, color: AppColors.textSecondary),
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
               for (final certification in certifications)
@@ -1262,9 +1248,10 @@ class _CertificationEditorDialogState
                       icon: const Icon(Icons.remove, size: 18),
                       onPressed: (staffCounts[certification.id] ?? 0) <= 0
                           ? null
-                          : () => setState(() =>
-                              staffCounts[certification.id] =
-                                  staffCounts[certification.id]! - 1),
+                          : () => setState(
+                              () => staffCounts[certification.id] =
+                                  staffCounts[certification.id]! - 1,
+                            ),
                     ),
                     SizedBox(
                       width: 24,
@@ -1277,9 +1264,10 @@ class _CertificationEditorDialogState
                     IconButton(
                       visualDensity: VisualDensity.compact,
                       icon: const Icon(Icons.add, size: 18),
-                      onPressed: () => setState(() =>
-                          staffCounts[certification.id] =
-                              (staffCounts[certification.id] ?? 0) + 1),
+                      onPressed: () => setState(
+                        () => staffCounts[certification.id] =
+                            (staffCounts[certification.id] ?? 0) + 1,
+                      ),
                     ),
                   ],
                 ),
