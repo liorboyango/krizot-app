@@ -86,6 +86,12 @@ class AppColors {
   /// Red text for critical shifts.
   static const Color shiftCriticalText = Color(0xFFB91C1C);
 
+  /// Violet tint background for training session chips.
+  static const Color training = Color(0xFFEDE9FE);
+
+  /// Violet text for training session chips.
+  static const Color trainingText = Color(0xFF6D28D9);
+
   // ---------------------------------------------------------------------------
   // Table
   // ---------------------------------------------------------------------------

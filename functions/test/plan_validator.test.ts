@@ -115,6 +115,91 @@ describe('checkAssignment', () => {
     ).toMatch(/overlapping/);
   });
 
+  it('enforces presence windows when the user has any', () => {
+    const ctx = context({
+      shifts: [shift('s1', 0, 2)],
+      availability: [
+        // Window covering only hours 1–5 — misses the shift's first hour.
+        { userId: 'alice', startMs: T0 + 1 * HOUR, endMs: T0 + 5 * HOUR },
+      ],
+    });
+    expect(
+      checkAssignment({ shiftId: 's1', userId: 'alice' }, ctx, []),
+    ).toMatch(/not on-site/);
+
+    const ctxCovered = context({
+      shifts: [shift('s1', 0, 2)],
+      availability: [
+        { userId: 'alice', startMs: T0 - 1 * HOUR, endMs: T0 + 5 * HOUR },
+      ],
+    });
+    expect(
+      checkAssignment({ shiftId: 's1', userId: 'alice' }, ctxCovered, []),
+    ).toBeNull();
+
+    // No windows at all → legacy always-present behaviour.
+    const ctxLegacy = context({
+      shifts: [shift('s1', 0, 2)],
+      availability: [
+        { userId: 'someone-else', startMs: T0, endMs: T0 + 2 * HOUR },
+      ],
+    });
+    expect(
+      checkAssignment({ shiftId: 's1', userId: 'alice' }, ctxLegacy, []),
+    ).toBeNull();
+  });
+
+  it('rejects users busy in an overlapping training session', () => {
+    const ctx = context({
+      shifts: [shift('s1', 0, 2)],
+      trainingSessions: [
+        {
+          id: 'tr1',
+          traineeId: null,
+          trainerIds: ['alice'],
+          startMs: T0 + 1 * HOUR,
+          endMs: T0 + 3 * HOUR,
+        },
+      ],
+    });
+    expect(
+      checkAssignment({ shiftId: 's1', userId: 'alice' }, ctx, []),
+    ).toMatch(/training session tr1/);
+
+    const ctxTrainee = context({
+      shifts: [shift('s1', 0, 2)],
+      trainingSessions: [
+        {
+          id: 'tr2',
+          traineeId: 'alice',
+          trainerIds: ['bob'],
+          startMs: T0 + 1 * HOUR,
+          endMs: T0 + 3 * HOUR,
+        },
+      ],
+    });
+    expect(
+      checkAssignment({ shiftId: 's1', userId: 'alice' }, ctxTrainee, []),
+    ).toMatch(/training session tr2/);
+
+    // Non-overlapping session is fine.
+    const ctxClear = context({
+      shifts: [shift('s1', 0, 2)],
+      trainingSessions: [
+        {
+          id: 'tr3',
+          traineeId: null,
+          trainerIds: ['alice'],
+          startMs: T0 + 3 * HOUR,
+          endMs: T0 + 5 * HOUR,
+        },
+      ],
+    });
+    expect(
+      checkAssignment({ shiftId: 's1', userId: 'alice' }, ctxClear, []),
+    ).toBeNull();
+  });
+
   it('allows back-to-back but not beyond the daily cap', () => {
     const ctx = context({
       shifts: [shift('s1', 0, 8, { userId: 'alice' }), shift('s2', 8, 13)],

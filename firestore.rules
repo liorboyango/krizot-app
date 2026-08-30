@@ -55,6 +55,35 @@ service cloud.firestore {
               && request.resource.data.acknowledged == true);
     }
 
+    // Presence windows on the availability calendar. Users manage their
+    // own; managers see and manage everyone's.
+    match /availability/{windowId} {
+      allow read: if isManager()
+          || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isManager()
+          || (signedIn() && request.resource.data.userId == request.auth.uid);
+      allow update: if isManager()
+          || (signedIn()
+              && resource.data.userId == request.auth.uid
+              && request.resource.data.userId == request.auth.uid);
+      allow delete: if isManager()
+          || (signedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // Per-day manning definitions (doc id == dayKey).
+    match /dayRequirements/{dayKey} {
+      allow read: if signedIn();
+      allow write: if isManager();
+    }
+
+    match /trainingSessions/{sessionId} {
+      allow read: if isManager()
+          || (signedIn()
+              && (resource.data.traineeId == request.auth.uid
+                  || request.auth.uid in resource.data.trainerIds));
+      allow write: if isManager();
+    }
+
     match /eventTypes/{eventTypeId} {
       allow read: if isDispatcher() || isManager();
       allow write: if isManager();

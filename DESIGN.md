@@ -43,3 +43,15 @@ Backend: node.js (Cloud Functions) with Firebase Firestore as database.
 For users sign-in, use Firebase Google Auth.
 Use Flutter for the mobile app & frontend of the Web interfaces 1 & 3.  Allow switching between Interface 1 & 3 when in Web, and allow only interface 2 in Mobile.
 State management - use RxDart + GetIt; Service + Manager using streams, singletons via GetIt. See ~/Documents/gitProjects/sentry_modder for reference.
+# Scheduling Extensions (v2)
+1. Availability Calendar: each user records presence windows with per-hour resolution (e.g. arriving 13.9 12:00, leaving 15.9 15:00). A user is only schedulable inside a window; users with no windows are treated as always present. Managers see windows in the scheduler; employees manage their own in Interface 2.
+
+2. Daily Manning Requirements: each day has a definition of exactly how many holders of which certifications are required (`dayRequirements/{dayKey}`). The scheduler day view shows required-vs-covered per certification.
+
+3. Certification Timestamps: each user's certification carries the date it was earned (`users.certificationTimes`), editable on the Staff screen.
+
+4. Training Courses: every user belongs to a fixed common training course (`users.courseNumber`), ascending — a lower number means an earlier, more senior cohort.
+
+5. Training Sessions: schedulable blocks where one or more certified users train an uncertified trainee toward a certification. Types: Simulation (staffing defined per certification — how many holders of which certifications), Spectation (exactly one certified spectator), Tutoring (one-on-one). Session priority defaults to the certification's level (higher level = higher priority) and stays editable. Sessions appear on the scheduler grid, and participants count as busy for shift assignment (client eligibility + backend plan validator + auto-fill).
+
+6. Per-User Schedule: in the scheduler, pressing a staff chip or searching staff opens that user's weekly schedule (presence windows, shifts, training sessions).

@@ -103,13 +103,37 @@ class UserService {
     }
   }
 
-  /// Manager-only (enforced by rules): replace a user's certification tags.
-  Future<bool> updateCertifications(String uid, List<String> certIds) async {
+  /// Manager-only (enforced by rules): replace a user's certification tags
+  /// together with their earned-at timestamps (certId → date).
+  Future<bool> updateCertifications(
+    String uid,
+    List<String> certIds,
+    Map<String, DateTime> certTimes,
+  ) async {
     const METHOD = 'updateCertifications';
     _log.info('$METHOD - START - uid: $uid certs: ${certIds.length}');
     try {
       await _firestore.collection(Constants.COLLECTION_USERS).doc(uid).update({
         'certifications': certIds,
+        'certificationTimes': certTimes.map(
+            (certId, date) => MapEntry(certId, Timestamp.fromDate(date))),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      _log.severe('$METHOD - Error: $e');
+      return false;
+    }
+  }
+
+  /// Manager-only: set the user's fixed training-course number (cohort).
+  Future<bool> updateCourseNumber(String uid, int? courseNumber) async {
+    const METHOD = 'updateCourseNumber';
+    _log.info('$METHOD - START - uid: $uid course: $courseNumber');
+    try {
+      await _firestore.collection(Constants.COLLECTION_USERS).doc(uid).update({
+        'courseNumber':
+            courseNumber ?? FieldValue.delete(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
       return true;

@@ -107,7 +107,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTagline.
   ///
   /// In en, this message translates to:
-  /// **'Shift scheduling & dispatch'**
+  /// **'Shift scheduling'**
   String get appTagline;
 
   /// No description provided for @cancel.
@@ -223,6 +223,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Next week'**
   String get nextWeek;
+
+  /// No description provided for @previousDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous day'**
+  String get previousDay;
+
+  /// No description provided for @nextDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Next day'**
+  String get nextDay;
+
+  /// No description provided for @dayView.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get dayView;
+
+  /// No description provided for @weekView.
+  ///
+  /// In en, this message translates to:
+  /// **'Week'**
+  String get weekView;
 
   /// No description provided for @today.
   ///
@@ -799,6 +823,330 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Critical'**
   String get chipCritical;
+
+  /// No description provided for @trainingRowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Training'**
+  String get trainingRowTitle;
+
+  /// No description provided for @newTrainingSession.
+  ///
+  /// In en, this message translates to:
+  /// **'New training session'**
+  String get newTrainingSession;
+
+  /// No description provided for @editTrainingSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit training session'**
+  String get editTrainingSession;
+
+  /// No description provided for @deleteTrainingSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete session'**
+  String get deleteTrainingSession;
+
+  /// No description provided for @trainingTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Session type'**
+  String get trainingTypeLabel;
+
+  /// No description provided for @trainingTypeSimulation.
+  ///
+  /// In en, this message translates to:
+  /// **'Simulation'**
+  String get trainingTypeSimulation;
+
+  /// No description provided for @trainingTypeSpectation.
+  ///
+  /// In en, this message translates to:
+  /// **'Spectation'**
+  String get trainingTypeSpectation;
+
+  /// No description provided for @trainingTypeTutoring.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutoring'**
+  String get trainingTypeTutoring;
+
+  /// No description provided for @certificationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Certification'**
+  String get certificationLabel;
+
+  /// No description provided for @traineeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainee'**
+  String get traineeLabel;
+
+  /// No description provided for @trainerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer'**
+  String get trainerLabel;
+
+  /// No description provided for @trainersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainers'**
+  String get trainersLabel;
+
+  /// No description provided for @noTraineeYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No trainee yet'**
+  String get noTraineeYet;
+
+  /// No description provided for @busyTag.
+  ///
+  /// In en, this message translates to:
+  /// **'(busy)'**
+  String get busyTag;
+
+  /// No description provided for @offSiteTag.
+  ///
+  /// In en, this message translates to:
+  /// **'(off-site)'**
+  String get offSiteTag;
+
+  /// No description provided for @simulationStaffingRule.
+  ///
+  /// In en, this message translates to:
+  /// **'Simulation staffing: {reqs}'**
+  String simulationStaffingRule(String reqs);
+
+  /// No description provided for @oneTrainerRule.
+  ///
+  /// In en, this message translates to:
+  /// **'Exactly one trainer holding the certification is required.'**
+  String get oneTrainerRule;
+
+  /// No description provided for @staffingUnsatisfied.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer selection doesn\'t meet the staffing requirement.'**
+  String get staffingUnsatisfied;
+
+  /// No description provided for @noUncertifiedUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone already holds this certification.'**
+  String get noUncertifiedUsers;
+
+  /// No description provided for @failedToSaveTraining.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save training session.'**
+  String get failedToSaveTraining;
+
+  /// No description provided for @defaultFromCertLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Default: certification level ({level})'**
+  String defaultFromCertLevel(int level);
+
+  /// No description provided for @dayRequirementsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily requirements'**
+  String get dayRequirementsTitle;
+
+  /// No description provided for @dayRequirementsFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Requirements — {date}'**
+  String dayRequirementsFor(String date);
+
+  /// No description provided for @editRequirements.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit requirements'**
+  String get editRequirements;
+
+  /// No description provided for @addRequirement.
+  ///
+  /// In en, this message translates to:
+  /// **'Add requirement'**
+  String get addRequirement;
+
+  /// No description provided for @noDayRequirements.
+  ///
+  /// In en, this message translates to:
+  /// **'No requirements defined for this day.'**
+  String get noDayRequirements;
+
+  /// No description provided for @failedToSaveRequirements.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save requirements.'**
+  String get failedToSaveRequirements;
+
+  /// No description provided for @requiredCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get requiredCountLabel;
+
+  /// No description provided for @searchStaffHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search staff…'**
+  String get searchStaffHint;
+
+  /// No description provided for @findUserSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Find user schedule'**
+  String get findUserSchedule;
+
+  /// No description provided for @userScheduleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} — schedule'**
+  String userScheduleTitle(String name);
+
+  /// No description provided for @weekOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Week of {date}'**
+  String weekOf(String date);
+
+  /// No description provided for @shiftsSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shifts'**
+  String get shiftsSectionTitle;
+
+  /// No description provided for @noShiftsThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'No shifts this week.'**
+  String get noShiftsThisWeek;
+
+  /// No description provided for @noTrainingThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'No training this week.'**
+  String get noTrainingThisWeek;
+
+  /// No description provided for @noAvailabilityThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'No presence windows this week.'**
+  String get noAvailabilityThisWeek;
+
+  /// No description provided for @courseTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Course {number}'**
+  String courseTag(int number);
+
+  /// No description provided for @viewScheduleTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'View schedule'**
+  String get viewScheduleTooltip;
+
+  /// No description provided for @noUsersMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No staff match \"{query}\".'**
+  String noUsersMatch(String query);
+
+  /// No description provided for @myAvailabilityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My availability'**
+  String get myAvailabilityTitle;
+
+  /// No description provided for @addAvailabilityWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Add window'**
+  String get addAvailabilityWindow;
+
+  /// No description provided for @arrivalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrival'**
+  String get arrivalLabel;
+
+  /// No description provided for @departureLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Departure'**
+  String get departureLabel;
+
+  /// No description provided for @noAvailabilityYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No presence windows yet — add your arrival and departure times.'**
+  String get noAvailabilityYet;
+
+  /// No description provided for @departureAfterArrival.
+  ///
+  /// In en, this message translates to:
+  /// **'Departure must be after arrival.'**
+  String get departureAfterArrival;
+
+  /// No description provided for @failedToSaveAvailability.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save availability.'**
+  String get failedToSaveAvailability;
+
+  /// No description provided for @deleteWindowAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete window'**
+  String get deleteWindowAction;
+
+  /// No description provided for @editWindowAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit window'**
+  String get editWindowAction;
+
+  /// No description provided for @courseNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Course number'**
+  String get courseNumberLabel;
+
+  /// No description provided for @earnedOnDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Earned {date}'**
+  String earnedOnDate(String date);
+
+  /// No description provided for @certLevelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Level'**
+  String get certLevelLabel;
+
+  /// No description provided for @simulationStaffTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Simulation staffing'**
+  String get simulationStaffTitle;
+
+  /// No description provided for @simulationStaffHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Which certification holders (and how many) are needed to run a simulation for this certification.'**
+  String get simulationStaffHint;
+
+  /// No description provided for @editCertification.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit certification'**
+  String get editCertification;
 
   /// No description provided for @emergencyDispatchTitle.
   ///

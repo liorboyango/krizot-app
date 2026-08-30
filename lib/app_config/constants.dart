@@ -23,6 +23,9 @@ class Constants {
   static const COLLECTION_EMERGENCY_EVENTS = 'emergencyEvents';
   static const COLLECTION_ACKS = 'acks';
   static const COLLECTION_CONFIG = 'config';
+  static const COLLECTION_AVAILABILITY = 'availability';
+  static const COLLECTION_DAY_REQUIREMENTS = 'dayRequirements';
+  static const COLLECTION_TRAINING_SESSIONS = 'trainingSessions';
 
   // Callable Cloud Functions.
   static const FN_AUTO_FILL_SCHEDULE = 'autoFillSchedule';

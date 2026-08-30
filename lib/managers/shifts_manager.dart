@@ -5,17 +5,22 @@ import 'package:rxdart/rxdart.dart';
 
 import '../app_config/service_locator.dart';
 import '../entities/app_user.dart';
+import '../entities/day_requirement.dart';
 import '../entities/shift.dart';
 import '../entities/station.dart';
+import '../services/day_requirements_service.dart';
 import '../services/shifts_service.dart';
 import '../services/user_service.dart';
 import '../utils/time_util.dart';
+import 'availability_manager.dart';
+import 'training_manager.dart';
 
 /// Heart of Interfaces 1 & 2: the manager grid (week of shifts around a
 /// selected date), the employee's own shift list, and assignment commands.
 class ShiftsManager {
   final _log = Logger('ShiftsManager');
   final _shiftsService = locator<ShiftsService>();
+  final _dayRequirementsService = locator<DayRequirementsService>();
 
   /// The date the scheduler grid is focused on.
   final _selectedDate = BehaviorSubject<DateTime>.seeded(DateTime.now());
@@ -38,7 +43,16 @@ class ShiftsManager {
   Stream<List<AppUser>> get employeesStream => _employees.stream;
   List<AppUser> get employees => _employees.valueOrNull ?? const [];
 
+  /// Per-day manning definitions (which certifications, how many) of the
+  /// week containing [selectedDate].
+  final _weekRequirements = BehaviorSubject<List<DayRequirement>>();
+  Stream<List<DayRequirement>> get weekRequirementsStream =>
+      _weekRequirements.stream;
+  List<DayRequirement> get weekRequirements =>
+      _weekRequirements.valueOrNull ?? const [];
+
   StreamSubscription? _weekShiftsListener;
+  StreamSubscription? _weekRequirementsListener;
   StreamSubscription? _myShiftsListener;
   StreamSubscription? _employeesListener;
   StreamSubscription? _selectedDateListener;
@@ -107,14 +121,24 @@ class ShiftsManager {
           (shifts) => _weekShifts.sink.add(shifts),
           onError: (Object e) => _log.severe('$METHOD - Error: $e'),
         );
+    _weekRequirementsListener?.cancel();
+    _weekRequirementsListener = _dayRequirementsService
+        .listenToRange(TimeUtil.dayKey(monday),
+            TimeUtil.dayKey(monday.add(const Duration(days: 7))))
+        .listen(
+          (requirements) => _weekRequirements.sink.add(requirements),
+          onError: (Object e) => _log.severe('$METHOD - requirements: $e'),
+        );
   }
 
   Future<void> cancelListeners() async {
     await _weekShiftsListener?.cancel();
+    await _weekRequirementsListener?.cancel();
     await _myShiftsListener?.cancel();
     await _employeesListener?.cancel();
     await _selectedDateListener?.cancel();
     _weekShiftsListener = null;
+    _weekRequirementsListener = null;
     _myShiftsListener = null;
     _employeesListener = null;
     _selectedDateListener = null;
@@ -129,11 +153,25 @@ class ShiftsManager {
   void previousWeek() =>
       selectDate(selectedDate.subtract(const Duration(days: 7)));
 
+  void nextDay() => selectDate(selectedDate.add(const Duration(days: 1)));
+
+  void previousDay() =>
+      selectDate(selectedDate.subtract(const Duration(days: 1)));
+
   /// Client-side mirror of the backend plan_validator predicate: certified
-  /// for the station, available, and free of overlapping shifts that day.
+  /// for the station, available, on-site per the availability calendar, and
+  /// free of overlapping shifts and training sessions.
   bool isEligible(AppUser candidate, Station station, Shift shift) {
     if (!candidate.isAvailable) return false;
     if (!candidate.hasAllCertifications(station.requiredCertifications)) {
+      return false;
+    }
+    if (!locator<AvailabilityManager>()
+        .isUserPresentDuring(candidate.id, shift.start, shift.end)) {
+      return false;
+    }
+    if (locator<TrainingManager>()
+        .hasTrainingOverlap(candidate.id, shift.start, shift.end)) {
       return false;
     }
     final hasOverlap = weekShifts.any((other) =>
@@ -145,6 +183,35 @@ class ShiftsManager {
 
   List<AppUser> eligibleCandidates(Station station, Shift shift) =>
       employees.where((user) => isEligible(user, station, shift)).toList();
+
+  /// The manning definition for [day], if one has been set.
+  DayRequirement? requirementForDay(DateTime day) {
+    final key = TimeUtil.dayKey(day);
+    for (final requirement in weekRequirements) {
+      if (requirement.dayKey == key) return requirement;
+    }
+    return null;
+  }
+
+  /// Coverage of [certificationId] on [day]: how many DISTINCT users
+  /// assigned to shifts that day hold the certification.
+  int certCoverageForDay(String certificationId, DateTime day) {
+    final assignedIds = weekShifts
+        .where((s) => s.isAssigned && TimeUtil.isSameDay(s.start, day))
+        .map((s) => s.userId!)
+        .toSet();
+    return employees
+        .where((u) =>
+            assignedIds.contains(u.id) &&
+            u.certifications.contains(certificationId))
+        .length;
+  }
+
+  Future<bool> setDayRequirement(DayRequirement requirement) async {
+    final uid = _currentUser?.id;
+    if (uid == null) return false;
+    return _dayRequirementsService.setDayRequirement(requirement, uid);
+  }
 
   Future<String?> createShift(Shift shift) async {
     final uid = _currentUser?.id;
@@ -186,6 +253,7 @@ class ShiftsManager {
     await Future.wait([
       _selectedDate.close(),
       _weekShifts.close(),
+      _weekRequirements.close(),
       _myShifts.close(),
       _employees.close(),
     ]);

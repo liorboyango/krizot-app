@@ -17,11 +17,15 @@ class ShiftEditorDialog extends StatefulWidget {
   final DateTime day;
   final Shift? shift;
 
+  /// Pre-selected start time for a new shift (e.g. the tapped hour cell).
+  final TimeOfDay? initialStart;
+
   const ShiftEditorDialog({
     super.key,
     required this.station,
     required this.day,
     this.shift,
+    this.initialStart,
   });
 
   static Future<void> show(
@@ -29,12 +33,13 @@ class ShiftEditorDialog extends StatefulWidget {
     required Station station,
     required DateTime day,
     Shift? shift,
+    TimeOfDay? initialStart,
   }) =>
       showDialog(
         context: context,
         routeSettings: const RouteSettings(name: 'shift_editor_dialog'),
-        builder: (_) =>
-            ShiftEditorDialog(station: station, day: day, shift: shift),
+        builder: (_) => ShiftEditorDialog(
+            station: station, day: day, shift: shift, initialStart: initialStart),
       );
 
   @override
@@ -55,12 +60,14 @@ class _ShiftEditorDialogState extends State<ShiftEditorDialog> {
       start = TimeOfDay.fromDateTime(widget.shift!.start);
       end = TimeOfDay.fromDateTime(widget.shift!.end);
     } else {
-      // Default: first active window start for on-demand stations, 08:00
-      // otherwise, plus the station's default shift length.
-      start = widget.station.isAroundTheClock ||
-              widget.station.activeWindows.isEmpty
-          ? const TimeOfDay(hour: 8, minute: 0)
-          : widget.station.activeWindows.first.startTime;
+      // Default: caller-provided start (tapped hour), else first active
+      // window start for on-demand stations, 08:00 otherwise — plus the
+      // station's default shift length.
+      start = widget.initialStart ??
+          (widget.station.isAroundTheClock ||
+                  widget.station.activeWindows.isEmpty
+              ? const TimeOfDay(hour: 8, minute: 0)
+              : widget.station.activeWindows.first.startTime);
       final startMinutes = start.hour * 60 + start.minute;
       final endMinutes =
           (startMinutes + widget.station.defaultShiftMinutes) % (24 * 60);

@@ -5,8 +5,13 @@ import 'package:krizot_app/app_config/service_locator.dart';
 import 'package:krizot_app/entities/app_user.dart';
 import 'package:krizot_app/entities/shift.dart';
 import 'package:krizot_app/entities/station.dart';
+import 'package:krizot_app/managers/availability_manager.dart';
 import 'package:krizot_app/managers/shifts_manager.dart';
+import 'package:krizot_app/managers/training_manager.dart';
+import 'package:krizot_app/services/availability_service.dart';
+import 'package:krizot_app/services/day_requirements_service.dart';
 import 'package:krizot_app/services/shifts_service.dart';
+import 'package:krizot_app/services/training_service.dart';
 import 'package:krizot_app/utils/time_util.dart';
 
 /// Real ShiftsService + ShiftsManager over fake_cloud_firestore, registered
@@ -27,12 +32,19 @@ void main() {
     firestore = FakeFirebaseFirestore();
     locator.registerSingleton<FirebaseFirestore>(firestore);
     locator.registerSingleton<ShiftsService>(ShiftsService());
+    locator.registerSingleton<DayRequirementsService>(DayRequirementsService());
     manager = ShiftsManager();
     locator.registerSingleton<ShiftsManager>(manager);
+    locator.registerSingleton<AvailabilityService>(AvailabilityService());
+    locator.registerSingleton<AvailabilityManager>(AvailabilityManager());
+    locator.registerSingleton<TrainingService>(TrainingService());
+    locator.registerSingleton<TrainingManager>(TrainingManager());
   });
 
   tearDown(() async {
     await manager.dispose();
+    await locator<AvailabilityManager>().dispose();
+    await locator<TrainingManager>().dispose();
     await locator.reset();
   });
 
@@ -146,5 +158,94 @@ void main() {
           employee.copyWith(status: UserStatus.sick), station, shift),
       isFalse,
     );
+  });
+
+  test('isEligible honours the availability calendar', () async {
+    const managerUser = AppUser(
+      id: 'mgr1',
+      displayName: 'Mor',
+      email: 'mor@example.com',
+      role: UserRole.manager,
+    );
+    const station = Station(
+      id: 'station1',
+      name: 'Gate',
+      location: 'North',
+      requiredCertifications: ['certGuard'],
+    );
+    final now = DateTime.now();
+    final shift = Shift(
+      id: 'x',
+      stationId: station.id,
+      start: now.add(const Duration(hours: 1)),
+      end: now.add(const Duration(hours: 3)),
+      dayKey: TimeUtil.dayKey(now),
+    );
+
+    // A window elsewhere in the week that does NOT cover the shift.
+    await firestore.collection('availability').add({
+      'userId': employee.id,
+      'start': Timestamp.fromDate(now.add(const Duration(hours: 5))),
+      'end': Timestamp.fromDate(now.add(const Duration(hours: 8))),
+    });
+
+    final availabilityManager = locator<AvailabilityManager>();
+    await availabilityManager.initListeners(managerUser);
+    await availabilityManager.weekWindowsStream
+        .firstWhere((windows) => windows.isNotEmpty);
+
+    expect(manager.isEligible(employee, station, shift), isFalse);
+
+    // A second window that covers the shift makes the user eligible again.
+    await firestore.collection('availability').add({
+      'userId': employee.id,
+      'start': Timestamp.fromDate(now.subtract(const Duration(hours: 1))),
+      'end': Timestamp.fromDate(now.add(const Duration(hours: 4))),
+    });
+    await availabilityManager.weekWindowsStream
+        .firstWhere((windows) => windows.length == 2);
+
+    expect(manager.isEligible(employee, station, shift), isTrue);
+  });
+
+  test('isEligible rejects candidates busy in a training session', () async {
+    const managerUser = AppUser(
+      id: 'mgr1',
+      displayName: 'Mor',
+      email: 'mor@example.com',
+      role: UserRole.manager,
+    );
+    const station = Station(
+      id: 'station1',
+      name: 'Gate',
+      location: 'North',
+      requiredCertifications: ['certGuard'],
+    );
+    final now = DateTime.now();
+    final shift = Shift(
+      id: 'x',
+      stationId: station.id,
+      start: now.add(const Duration(hours: 1)),
+      end: now.add(const Duration(hours: 3)),
+      dayKey: TimeUtil.dayKey(now),
+    );
+
+    await firestore.collection('trainingSessions').add({
+      'certificationId': 'certGuard',
+      'type': 'tutoring',
+      'traineeId': 'rookie',
+      'trainerIds': [employee.id],
+      'start': Timestamp.fromDate(now.add(const Duration(hours: 2))),
+      'end': Timestamp.fromDate(now.add(const Duration(hours: 4))),
+      'dayKey': TimeUtil.dayKey(now),
+      'priority': 1,
+    });
+
+    final trainingManager = locator<TrainingManager>();
+    await trainingManager.initListeners(managerUser);
+    await trainingManager.weekSessionsStream
+        .firstWhere((sessions) => sessions.isNotEmpty);
+
+    expect(manager.isEligible(employee, station, shift), isFalse);
   });
 }

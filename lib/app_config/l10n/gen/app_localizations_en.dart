@@ -13,7 +13,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appName => 'Krizot';
 
   @override
-  String get appTagline => 'Shift scheduling & dispatch';
+  String get appTagline => 'Shift scheduling';
 
   @override
   String get cancel => 'Cancel';
@@ -72,6 +72,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get nextWeek => 'Next week';
+
+  @override
+  String get previousDay => 'Previous day';
+
+  @override
+  String get nextDay => 'Next day';
+
+  @override
+  String get dayView => 'Day';
+
+  @override
+  String get weekView => 'Week';
 
   @override
   String get today => 'Today';
@@ -412,6 +424,188 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chipCritical => 'Critical';
+
+  @override
+  String get trainingRowTitle => 'Training';
+
+  @override
+  String get newTrainingSession => 'New training session';
+
+  @override
+  String get editTrainingSession => 'Edit training session';
+
+  @override
+  String get deleteTrainingSession => 'Delete session';
+
+  @override
+  String get trainingTypeLabel => 'Session type';
+
+  @override
+  String get trainingTypeSimulation => 'Simulation';
+
+  @override
+  String get trainingTypeSpectation => 'Spectation';
+
+  @override
+  String get trainingTypeTutoring => 'Tutoring';
+
+  @override
+  String get certificationLabel => 'Certification';
+
+  @override
+  String get traineeLabel => 'Trainee';
+
+  @override
+  String get trainerLabel => 'Trainer';
+
+  @override
+  String get trainersLabel => 'Trainers';
+
+  @override
+  String get noTraineeYet => 'No trainee yet';
+
+  @override
+  String get busyTag => '(busy)';
+
+  @override
+  String get offSiteTag => '(off-site)';
+
+  @override
+  String simulationStaffingRule(String reqs) {
+    return 'Simulation staffing: $reqs';
+  }
+
+  @override
+  String get oneTrainerRule =>
+      'Exactly one trainer holding the certification is required.';
+
+  @override
+  String get staffingUnsatisfied =>
+      'Trainer selection doesn\'t meet the staffing requirement.';
+
+  @override
+  String get noUncertifiedUsers => 'Everyone already holds this certification.';
+
+  @override
+  String get failedToSaveTraining => 'Failed to save training session.';
+
+  @override
+  String defaultFromCertLevel(int level) {
+    return 'Default: certification level ($level)';
+  }
+
+  @override
+  String get dayRequirementsTitle => 'Daily requirements';
+
+  @override
+  String dayRequirementsFor(String date) {
+    return 'Requirements — $date';
+  }
+
+  @override
+  String get editRequirements => 'Edit requirements';
+
+  @override
+  String get addRequirement => 'Add requirement';
+
+  @override
+  String get noDayRequirements => 'No requirements defined for this day.';
+
+  @override
+  String get failedToSaveRequirements => 'Failed to save requirements.';
+
+  @override
+  String get requiredCountLabel => 'Required';
+
+  @override
+  String get searchStaffHint => 'Search staff…';
+
+  @override
+  String get findUserSchedule => 'Find user schedule';
+
+  @override
+  String userScheduleTitle(String name) {
+    return '$name — schedule';
+  }
+
+  @override
+  String weekOf(String date) {
+    return 'Week of $date';
+  }
+
+  @override
+  String get shiftsSectionTitle => 'Shifts';
+
+  @override
+  String get noShiftsThisWeek => 'No shifts this week.';
+
+  @override
+  String get noTrainingThisWeek => 'No training this week.';
+
+  @override
+  String get noAvailabilityThisWeek => 'No presence windows this week.';
+
+  @override
+  String courseTag(int number) {
+    return 'Course $number';
+  }
+
+  @override
+  String get viewScheduleTooltip => 'View schedule';
+
+  @override
+  String noUsersMatch(String query) {
+    return 'No staff match \"$query\".';
+  }
+
+  @override
+  String get myAvailabilityTitle => 'My availability';
+
+  @override
+  String get addAvailabilityWindow => 'Add window';
+
+  @override
+  String get arrivalLabel => 'Arrival';
+
+  @override
+  String get departureLabel => 'Departure';
+
+  @override
+  String get noAvailabilityYet =>
+      'No presence windows yet — add your arrival and departure times.';
+
+  @override
+  String get departureAfterArrival => 'Departure must be after arrival.';
+
+  @override
+  String get failedToSaveAvailability => 'Failed to save availability.';
+
+  @override
+  String get deleteWindowAction => 'Delete window';
+
+  @override
+  String get editWindowAction => 'Edit window';
+
+  @override
+  String get courseNumberLabel => 'Course number';
+
+  @override
+  String earnedOnDate(String date) {
+    return 'Earned $date';
+  }
+
+  @override
+  String get certLevelLabel => 'Level';
+
+  @override
+  String get simulationStaffTitle => 'Simulation staffing';
+
+  @override
+  String get simulationStaffHint =>
+      'Which certification holders (and how many) are needed to run a simulation for this certification.';
+
+  @override
+  String get editCertification => 'Edit certification';
 
   @override
   String get emergencyDispatchTitle => 'Emergency Dispatch';

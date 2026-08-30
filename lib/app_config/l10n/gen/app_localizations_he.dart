@@ -10,10 +10,10 @@ class AppLocalizationsHe extends AppLocalizations {
   AppLocalizationsHe([String locale = 'he']) : super(locale);
 
   @override
-  String get appName => 'קריזות';
+  String get appName => 'כריזות';
 
   @override
-  String get appTagline => 'שיבוץ משמרות ומוקד חירום';
+  String get appTagline => 'שיבוץ משמרות';
 
   @override
   String get cancel => 'ביטול';
@@ -71,6 +71,18 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get nextWeek => 'שבוע הבא';
+
+  @override
+  String get previousDay => 'יום קודם';
+
+  @override
+  String get nextDay => 'יום הבא';
+
+  @override
+  String get dayView => 'יום';
+
+  @override
+  String get weekView => 'שבוע';
 
   @override
   String get today => 'היום';
@@ -409,6 +421,186 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get chipCritical => 'קריטי';
+
+  @override
+  String get trainingRowTitle => 'אימונים';
+
+  @override
+  String get newTrainingSession => 'אימון חדש';
+
+  @override
+  String get editTrainingSession => 'עריכת אימון';
+
+  @override
+  String get deleteTrainingSession => 'מחיקת אימון';
+
+  @override
+  String get trainingTypeLabel => 'סוג אימון';
+
+  @override
+  String get trainingTypeSimulation => 'סימולציה';
+
+  @override
+  String get trainingTypeSpectation => 'צפייה';
+
+  @override
+  String get trainingTypeTutoring => 'חניכה אישית';
+
+  @override
+  String get certificationLabel => 'הסמכה';
+
+  @override
+  String get traineeLabel => 'חניך';
+
+  @override
+  String get trainerLabel => 'מאמן';
+
+  @override
+  String get trainersLabel => 'מאמנים';
+
+  @override
+  String get noTraineeYet => 'אין חניך עדיין';
+
+  @override
+  String get busyTag => '(תפוס)';
+
+  @override
+  String get offSiteTag => '(לא נוכח)';
+
+  @override
+  String simulationStaffingRule(String reqs) {
+    return 'איוש סימולציה: $reqs';
+  }
+
+  @override
+  String get oneTrainerRule => 'נדרש בדיוק מאמן אחד המחזיק בהסמכה.';
+
+  @override
+  String get staffingUnsatisfied => 'בחירת המאמנים אינה עומדת בדרישת האיוש.';
+
+  @override
+  String get noUncertifiedUsers => 'כולם כבר מחזיקים בהסמכה זו.';
+
+  @override
+  String get failedToSaveTraining => 'שמירת האימון נכשלה.';
+
+  @override
+  String defaultFromCertLevel(int level) {
+    return 'ברירת מחדל: רמת ההסמכה ($level)';
+  }
+
+  @override
+  String get dayRequirementsTitle => 'דרישות יומיות';
+
+  @override
+  String dayRequirementsFor(String date) {
+    return 'דרישות — $date';
+  }
+
+  @override
+  String get editRequirements => 'עריכת דרישות';
+
+  @override
+  String get addRequirement => 'הוספת דרישה';
+
+  @override
+  String get noDayRequirements => 'לא הוגדרו דרישות ליום זה.';
+
+  @override
+  String get failedToSaveRequirements => 'שמירת הדרישות נכשלה.';
+
+  @override
+  String get requiredCountLabel => 'נדרש';
+
+  @override
+  String get searchStaffHint => 'חיפוש אנשי צוות…';
+
+  @override
+  String get findUserSchedule => 'חיפוש לוח אישי';
+
+  @override
+  String userScheduleTitle(String name) {
+    return '$name — לוח אישי';
+  }
+
+  @override
+  String weekOf(String date) {
+    return 'שבוע של $date';
+  }
+
+  @override
+  String get shiftsSectionTitle => 'משמרות';
+
+  @override
+  String get noShiftsThisWeek => 'אין משמרות השבוע.';
+
+  @override
+  String get noTrainingThisWeek => 'אין אימונים השבוע.';
+
+  @override
+  String get noAvailabilityThisWeek => 'אין חלונות נוכחות השבוע.';
+
+  @override
+  String courseTag(int number) {
+    return 'קורס $number';
+  }
+
+  @override
+  String get viewScheduleTooltip => 'צפייה בלוח האישי';
+
+  @override
+  String noUsersMatch(String query) {
+    return 'אין אנשי צוות התואמים ל\"$query\".';
+  }
+
+  @override
+  String get myAvailabilityTitle => 'הזמינות שלי';
+
+  @override
+  String get addAvailabilityWindow => 'הוספת חלון';
+
+  @override
+  String get arrivalLabel => 'הגעה';
+
+  @override
+  String get departureLabel => 'עזיבה';
+
+  @override
+  String get noAvailabilityYet =>
+      'אין עדיין חלונות נוכחות — הוסיפו את שעות ההגעה והעזיבה שלכם.';
+
+  @override
+  String get departureAfterArrival => 'העזיבה חייבת להיות אחרי ההגעה.';
+
+  @override
+  String get failedToSaveAvailability => 'שמירת הזמינות נכשלה.';
+
+  @override
+  String get deleteWindowAction => 'מחיקת חלון';
+
+  @override
+  String get editWindowAction => 'עריכת חלון';
+
+  @override
+  String get courseNumberLabel => 'מספר קורס';
+
+  @override
+  String earnedOnDate(String date) {
+    return 'הוסמך $date';
+  }
+
+  @override
+  String get certLevelLabel => 'רמה';
+
+  @override
+  String get simulationStaffTitle => 'איוש סימולציה';
+
+  @override
+  String get simulationStaffHint =>
+      'אילו מחזיקי הסמכות (וכמה) נדרשים להרצת סימולציה להסמכה זו.';
+
+  @override
+  String get editCertification => 'עריכת הסמכה';
 
   @override
   String get emergencyDispatchTitle => 'מוקד חירום';

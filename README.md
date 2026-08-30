@@ -25,6 +25,11 @@ firebase emulators:start
 flutter run -d chrome \
   --dart-define=USE_FIREBASE_EMULATOR=true \
   --dart-define=KRIZOT_RECAPTCHA_SITE_KEY=<site-key>
+
+# Chrome with your own Google account (persistent profile seeded once from
+# your regular Chrome profile; extra args pass through to `flutter run`):
+tool/run_chrome.sh
+tool/run_chrome.sh --reset-profile   # re-seed from Chrome's profile
 ```
 
 ### Tests

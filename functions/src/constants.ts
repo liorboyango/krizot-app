@@ -12,6 +12,9 @@ export const COLLECTION_EVENT_TYPES = 'eventTypes';
 export const COLLECTION_EMERGENCY_EVENTS = 'emergencyEvents';
 export const COLLECTION_ACKS = 'acks';
 export const COLLECTION_CONFIG = 'config';
+export const COLLECTION_AVAILABILITY = 'availability';
+export const COLLECTION_DAY_REQUIREMENTS = 'dayRequirements';
+export const COLLECTION_TRAINING_SESSIONS = 'trainingSessions';
 
 export const DEFAULT_MAX_DAILY_HOURS = 12;
 export const DEFAULT_MAX_REPAIR_ATTEMPTS = 2;

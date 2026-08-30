@@ -55,6 +55,28 @@ export function checkAssignment(
     return `user ${user.id} lacks certification(s): ${missing.join(', ')}`;
   }
 
+  // Availability calendar: a user with presence windows must have one that
+  // fully covers the shift; a user with no windows is treated as present.
+  const windows = (context.availability ?? []).filter(
+    (w) => w.userId === user.id,
+  );
+  if (
+    windows.length > 0 &&
+    !windows.some((w) => w.startMs <= shift.startMs && w.endMs >= shift.endMs)
+  ) {
+    return `user ${user.id} is not on-site for the whole shift`;
+  }
+
+  const training = (context.trainingSessions ?? []).find(
+    (t) =>
+      (t.traineeId === user.id || t.trainerIds.includes(user.id)) &&
+      shift.startMs < t.endMs &&
+      t.startMs < shift.endMs,
+  );
+  if (training) {
+    return `user ${user.id} is in training session ${training.id} at that time`;
+  }
+
   const userShiftIds = new Set(
     accepted.filter((a) => a.userId === user.id).map((a) => a.shiftId),
   );

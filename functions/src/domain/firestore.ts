@@ -3,12 +3,14 @@
  * must go through getDb() — this project has no (default) database.
  */
 
-import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { getFirestore, Firestore, Timestamp } from 'firebase-admin/firestore';
 
 import {
+  COLLECTION_AVAILABILITY,
   COLLECTION_CONFIG,
   COLLECTION_SHIFTS,
   COLLECTION_STATIONS,
+  COLLECTION_TRAINING_SESSIONS,
   COLLECTION_USERS,
   DATABASE_ID,
   DEFAULT_LLM_MODEL,
@@ -16,7 +18,13 @@ import {
   DEFAULT_MAX_DAILY_HOURS,
   DEFAULT_MAX_REPAIR_ATTEMPTS,
 } from '../constants';
-import { ShiftRecord, StationRecord, UserRecord } from './types';
+import {
+  AvailabilityRecord,
+  ShiftRecord,
+  StationRecord,
+  TrainingRecord,
+  UserRecord,
+} from './types';
 
 export function getDb(): Firestore {
   return getFirestore(DATABASE_ID);
@@ -79,6 +87,49 @@ export async function loadShiftsForDay(dayKey: string): Promise<ShiftRecord[]> {
     .where('dayKey', '==', dayKey)
     .get();
   return snapshot.docs.map(shiftFromDoc);
+}
+
+/**
+ * Presence windows overlapping [startMs, endMs). Single-field query on
+ * `end`; the start-side bound is filtered in memory.
+ */
+export async function loadAvailabilityOverlapping(
+  startMs: number,
+  endMs: number,
+): Promise<AvailabilityRecord[]> {
+  const snapshot = await getDb()
+    .collection(COLLECTION_AVAILABILITY)
+    .where('end', '>', Timestamp.fromMillis(startMs))
+    .get();
+  return snapshot.docs
+    .map((doc) => {
+      const data = doc.data();
+      return {
+        userId: (data.userId as string) ?? '',
+        startMs: data.start?.toMillis?.() ?? 0,
+        endMs: data.end?.toMillis?.() ?? 0,
+      };
+    })
+    .filter((window) => window.startMs < endMs);
+}
+
+export async function loadTrainingForDay(
+  dayKey: string,
+): Promise<TrainingRecord[]> {
+  const snapshot = await getDb()
+    .collection(COLLECTION_TRAINING_SESSIONS)
+    .where('dayKey', '==', dayKey)
+    .get();
+  return snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      traineeId: (data.traineeId as string | null) ?? null,
+      trainerIds: (data.trainerIds as string[]) ?? [],
+      startMs: data.start?.toMillis?.() ?? 0,
+      endMs: data.end?.toMillis?.() ?? 0,
+    };
+  });
 }
 
 export function shiftFromDoc(

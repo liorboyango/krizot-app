@@ -1,5 +1,6 @@
 import '../app_config/l10n/gen/app_localizations.dart';
 import '../entities/app_user.dart';
+import '../entities/training_session.dart';
 
 /// Localized labels for enums whose `.name` used to be shown raw in the UI.
 class L10nUtil {
@@ -18,5 +19,12 @@ class L10nUtil {
         UserStatus.available => l10n.statusAvailable,
         UserStatus.sick => l10n.statusSick,
         UserStatus.unavailable => l10n.statusUnavailable,
+      };
+
+  static String trainingTypeLabel(AppLocalizations l10n, TrainingType type) =>
+      switch (type) {
+        TrainingType.simulation => l10n.trainingTypeSimulation,
+        TrainingType.spectation => l10n.trainingTypeSpectation,
+        TrainingType.tutoring => l10n.trainingTypeTutoring,
       };
 }

@@ -4,16 +4,21 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 
+import '../managers/availability_manager.dart';
 import '../managers/dispatch_manager.dart';
 import '../managers/notifications_manager.dart';
 import '../managers/shifts_manager.dart';
 import '../managers/stations_manager.dart';
+import '../managers/training_manager.dart';
 import '../managers/user_manager.dart';
+import '../services/availability_service.dart';
 import '../services/certifications_service.dart';
+import '../services/day_requirements_service.dart';
 import '../services/dispatch_service.dart';
 import '../services/functions_service.dart';
 import '../services/shifts_service.dart';
 import '../services/stations_service.dart';
+import '../services/training_service.dart';
 import '../services/user_service.dart';
 import 'constants.dart';
 
@@ -48,10 +53,25 @@ Future<void> initSingletons({
     dispose: (manager) => manager.dispose(),
   );
 
-  /// Shifts
+  /// Shifts + per-day manning requirements
   locator.registerSingleton<ShiftsService>(ShiftsService());
+  locator.registerSingleton<DayRequirementsService>(DayRequirementsService());
   locator.registerSingleton<ShiftsManager>(
     ShiftsManager(),
+    dispose: (manager) => manager.dispose(),
+  );
+
+  /// Availability calendar
+  locator.registerSingleton<AvailabilityService>(AvailabilityService());
+  locator.registerSingleton<AvailabilityManager>(
+    AvailabilityManager(),
+    dispose: (manager) => manager.dispose(),
+  );
+
+  /// Training sessions
+  locator.registerSingleton<TrainingService>(TrainingService());
+  locator.registerSingleton<TrainingManager>(
+    TrainingManager(),
     dispose: (manager) => manager.dispose(),
   );
 

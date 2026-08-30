@@ -1,6 +1,6 @@
 {
   "appName": "Krizot",
-  "appTagline": "Shift scheduling & dispatch",
+  "appTagline": "Shift scheduling",
 
   "cancel": "Cancel",
   "close": "Close",
@@ -24,6 +24,10 @@
   "noActiveStations": "No active stations — create one on the Stations screen.",
   "previousWeek": "Previous week",
   "nextWeek": "Next week",
+  "previousDay": "Previous day",
+  "nextDay": "Next day",
+  "dayView": "Day",
+  "weekView": "Week",
   "today": "Today",
   "autoFillWhichDay": "Auto-fill which day?",
   "autoFill": "Auto-Fill",
@@ -234,6 +238,121 @@
   "chipCovered": "Covered",
   "chipOpen": "Open",
   "chipCritical": "Critical",
+
+  "trainingRowTitle": "Training",
+  "newTrainingSession": "New training session",
+  "editTrainingSession": "Edit training session",
+  "deleteTrainingSession": "Delete session",
+  "trainingTypeLabel": "Session type",
+  "trainingTypeSimulation": "Simulation",
+  "trainingTypeSpectation": "Spectation",
+  "trainingTypeTutoring": "Tutoring",
+  "certificationLabel": "Certification",
+  "traineeLabel": "Trainee",
+  "trainerLabel": "Trainer",
+  "trainersLabel": "Trainers",
+  "noTraineeYet": "No trainee yet",
+  "busyTag": "(busy)",
+  "offSiteTag": "(off-site)",
+  "simulationStaffingRule": "Simulation staffing: {reqs}",
+  "@simulationStaffingRule": {
+    "placeholders": {
+      "reqs": {
+        "type": "String"
+      }
+    }
+  },
+  "oneTrainerRule": "Exactly one trainer holding the certification is required.",
+  "staffingUnsatisfied": "Trainer selection doesn't meet the staffing requirement.",
+  "noUncertifiedUsers": "Everyone already holds this certification.",
+  "failedToSaveTraining": "Failed to save training session.",
+  "defaultFromCertLevel": "Default: certification level ({level})",
+  "@defaultFromCertLevel": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+
+  "dayRequirementsTitle": "Daily requirements",
+  "dayRequirementsFor": "Requirements — {date}",
+  "@dayRequirementsFor": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "editRequirements": "Edit requirements",
+  "addRequirement": "Add requirement",
+  "noDayRequirements": "No requirements defined for this day.",
+  "failedToSaveRequirements": "Failed to save requirements.",
+  "requiredCountLabel": "Required",
+
+  "searchStaffHint": "Search staff…",
+  "findUserSchedule": "Find user schedule",
+  "userScheduleTitle": "{name} — schedule",
+  "@userScheduleTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "weekOf": "Week of {date}",
+  "@weekOf": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "shiftsSectionTitle": "Shifts",
+  "noShiftsThisWeek": "No shifts this week.",
+  "noTrainingThisWeek": "No training this week.",
+  "noAvailabilityThisWeek": "No presence windows this week.",
+  "courseTag": "Course {number}",
+  "@courseTag": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "viewScheduleTooltip": "View schedule",
+  "noUsersMatch": "No staff match \"{query}\".",
+  "@noUsersMatch": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+
+  "myAvailabilityTitle": "My availability",
+  "addAvailabilityWindow": "Add window",
+  "arrivalLabel": "Arrival",
+  "departureLabel": "Departure",
+  "noAvailabilityYet": "No presence windows yet — add your arrival and departure times.",
+  "departureAfterArrival": "Departure must be after arrival.",
+  "failedToSaveAvailability": "Failed to save availability.",
+  "deleteWindowAction": "Delete window",
+  "editWindowAction": "Edit window",
+
+  "courseNumberLabel": "Course number",
+  "earnedOnDate": "Earned {date}",
+  "@earnedOnDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "certLevelLabel": "Level",
+  "simulationStaffTitle": "Simulation staffing",
+  "simulationStaffHint": "Which certification holders (and how many) are needed to run a simulation for this certification.",
+  "editCertification": "Edit certification",
 
   "emergencyDispatchTitle": "Emergency Dispatch",
   "eventTypesTitle": "Event Types",

@@ -13,9 +13,11 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { COLLECTION_SHIFTS, REGION } from '../constants';
 import {
   getDb,
+  loadAvailabilityOverlapping,
   loadLlmConfig,
   loadShiftsForDay,
   loadStations,
+  loadTrainingForDay,
   loadUsers,
 } from '../domain/firestore';
 import { fillGreedy } from '../domain/greedy_filler';
@@ -42,22 +44,31 @@ export const autoFillSchedule = onCall(
     // Advisory manager guidance for the LLM — hard constraints still win.
     const instructions = rawInstructions?.trim().slice(0, 2000) || undefined;
 
-    const [config, users, stations, shifts] = await Promise.all([
-      loadLlmConfig(),
-      loadUsers(),
-      loadStations(),
-      loadShiftsForDay(dayKey),
-    ]);
+    const [config, users, stations, shifts, trainingSessions] =
+      await Promise.all([
+        loadLlmConfig(),
+        loadUsers(),
+        loadStations(),
+        loadShiftsForDay(dayKey),
+        loadTrainingForDay(dayKey),
+      ]);
+    const openCount = shifts.filter((s) => s.userId === null).length;
+    if (openCount === 0) {
+      return { filled: 0, unfilled: [], notes: 'No open shifts on this day.' };
+    }
+    // Presence windows overlapping the day's shifts.
+    const availability = await loadAvailabilityOverlapping(
+      Math.min(...shifts.map((s) => s.startMs)),
+      Math.max(...shifts.map((s) => s.endMs)),
+    );
     const context: PlanningContext = {
       users,
       stations,
       shifts,
       maxDailyHours: config.maxDailyHours,
+      availability,
+      trainingSessions,
     };
-    const openCount = shifts.filter((s) => s.userId === null).length;
-    if (openCount === 0) {
-      return { filled: 0, unfilled: [], notes: 'No open shifts on this day.' };
-    }
 
     // LLM plan with repair loop — advisory only; the validator decides.
     let accepted: Assignment[] = [];

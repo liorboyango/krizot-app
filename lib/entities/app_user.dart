@@ -35,6 +35,13 @@ class AppUser {
   final String? photoUrl;
   final UserRole role;
   final List<String> certifications;
+
+  /// When each held certification was earned: certId → timestamp.
+  final Map<String, DateTime> certificationTimes;
+
+  /// The fixed common training course the user belongs to — ascending
+  /// order, so a lower number means an earlier (more senior) cohort.
+  final int? courseNumber;
   final UserStatus status;
   final Map<String, dynamic> fcmTokens;
   final DateTime? createdAt;
@@ -47,6 +54,8 @@ class AppUser {
     this.photoUrl,
     this.role = UserRole.employee,
     this.certifications = const [],
+    this.certificationTimes = const {},
+    this.courseNumber,
     this.status = UserStatus.available,
     this.fcmTokens = const {},
     this.createdAt,
@@ -58,6 +67,8 @@ class AppUser {
   bool hasAllCertifications(List<String> required) =>
       required.every(certifications.contains);
 
+  DateTime? certificationEarnedAt(String certId) => certificationTimes[certId];
+
   factory AppUser.fromMap(String id, Map<String, dynamic> map) => AppUser(
         id: id,
         displayName: map['displayName'] as String? ?? '',
@@ -66,6 +77,10 @@ class AppUser {
         role: UserRole.fromString(map['role'] as String?),
         certifications:
             List<String>.from(map['certifications'] as List? ?? const []),
+        certificationTimes:
+            (map['certificationTimes'] as Map? ?? const {}).map((key, value) =>
+                MapEntry(key as String, (value as Timestamp).toDate())),
+        courseNumber: (map['courseNumber'] as num?)?.toInt(),
         status: UserStatus.fromString(map['status'] as String?),
         fcmTokens: Map<String, dynamic>.from(map['fcmTokens'] as Map? ?? {}),
         createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
@@ -81,6 +96,9 @@ class AppUser {
         if (photoUrl != null) 'photoUrl': photoUrl,
         'role': role.name,
         'certifications': certifications,
+        'certificationTimes': certificationTimes.map(
+            (key, value) => MapEntry(key, Timestamp.fromDate(value))),
+        if (courseNumber != null) 'courseNumber': courseNumber,
         'status': status.name,
         'fcmTokens': fcmTokens,
         if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),
@@ -91,6 +109,8 @@ class AppUser {
     String? displayName,
     UserRole? role,
     List<String>? certifications,
+    Map<String, DateTime>? certificationTimes,
+    int? courseNumber,
     UserStatus? status,
   }) =>
       AppUser(
@@ -100,6 +120,8 @@ class AppUser {
         photoUrl: photoUrl,
         role: role ?? this.role,
         certifications: certifications ?? this.certifications,
+        certificationTimes: certificationTimes ?? this.certificationTimes,
+        courseNumber: courseNumber ?? this.courseNumber,
         status: status ?? this.status,
         fcmTokens: fcmTokens,
         createdAt: createdAt,

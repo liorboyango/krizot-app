@@ -12,6 +12,10 @@ Assign users to open shifts. Hard constraints (violations are rejected):
 - The user's status must be "available".
 - No overlapping shifts for the same user.
 - A user's total assigned hours in the day must not exceed the stated cap.
+- A user listed under presenceWindows may only take shifts fully inside one
+  of their windows; users without windows are always on-site.
+- A user participating in a training session must not get a shift that
+  overlaps it.
 Soft goals, in order: fill as many open shifts as possible; balance workload
 fairly across users; avoid back-to-back shifts for the same user when
 alternatives exist. Only reference shiftIds and userIds from the context.`;
@@ -60,6 +64,19 @@ export function buildAutoFillPrompt(
     existingAssignments: context.shifts
       .filter((s) => s.userId !== null)
       .map(shiftLine),
+    presenceWindows: (context.availability ?? []).map((window) => ({
+      userId: window.userId,
+      start: new Date(window.startMs).toISOString(),
+      end: new Date(window.endMs).toISOString(),
+    })),
+    trainingSessions: (context.trainingSessions ?? []).map((session) => ({
+      participants: [
+        ...(session.traineeId ? [session.traineeId] : []),
+        ...session.trainerIds,
+      ],
+      start: new Date(session.startMs).toISOString(),
+      end: new Date(session.endMs).toISOString(),
+    })),
   };
   let prompt = `Fill the open shifts.\n\nContext:\n${JSON.stringify(payload, null, 1)}`;
   if (instructions) {

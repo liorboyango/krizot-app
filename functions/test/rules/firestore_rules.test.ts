@@ -204,3 +204,132 @@ describe('emergencyEvents', () => {
     );
   });
 });
+
+describe('availability', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc('availability/win1').set({
+        userId: 'emp1',
+        start: new Date('2026-09-13T12:00:00Z'),
+        end: new Date('2026-09-15T15:00:00Z'),
+      });
+      await context.firestore().doc('availability/win2').set({
+        userId: 'other',
+        start: new Date('2026-09-13T12:00:00Z'),
+        end: new Date('2026-09-15T15:00:00Z'),
+      });
+    });
+  });
+
+  it('employee manages own windows only', async () => {
+    await assertSucceeds(dbFor(EMPLOYEE).doc('availability/win1').get());
+    await assertSucceeds(
+      dbFor(EMPLOYEE).collection('availability').add({
+        userId: 'emp1',
+        start: new Date(),
+        end: new Date(Date.now() + 3_600_000),
+      }),
+    );
+    await assertSucceeds(
+      dbFor(EMPLOYEE)
+        .doc('availability/win1')
+        .update({ end: new Date('2026-09-15T18:00:00Z') }),
+    );
+    await assertSucceeds(dbFor(EMPLOYEE).doc('availability/win1').delete());
+  });
+
+  it("employee cannot touch someone else's windows", async () => {
+    await assertFails(dbFor(EMPLOYEE).doc('availability/win2').get());
+    await assertFails(
+      dbFor(EMPLOYEE).collection('availability').add({
+        userId: 'other',
+        start: new Date(),
+        end: new Date(),
+      }),
+    );
+    await assertFails(
+      dbFor(EMPLOYEE).doc('availability/win2').update({ userId: 'emp1' }),
+    );
+    await assertFails(
+      dbFor(EMPLOYEE).doc('availability/win1').update({ userId: 'other' }),
+    );
+    await assertFails(dbFor(EMPLOYEE).doc('availability/win2').delete());
+  });
+
+  it('manager can read and manage all windows', async () => {
+    await assertSucceeds(dbFor(MANAGER).doc('availability/win2').get());
+    await assertSucceeds(dbFor(MANAGER).doc('availability/win2').delete());
+  });
+});
+
+describe('dayRequirements', () => {
+  it('signed-in users read; only managers write', async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc('dayRequirements/2026-09-13').set({
+        dayKey: '2026-09-13',
+        requirements: [{ certificationId: 'certC', count: 2 }],
+      });
+    });
+    await assertSucceeds(
+      dbFor(EMPLOYEE).doc('dayRequirements/2026-09-13').get(),
+    );
+    await assertFails(
+      dbFor(EMPLOYEE)
+        .doc('dayRequirements/2026-09-13')
+        .set({ dayKey: '2026-09-13', requirements: [] }),
+    );
+    await assertSucceeds(
+      dbFor(MANAGER)
+        .doc('dayRequirements/2026-09-14')
+        .set({ dayKey: '2026-09-14', requirements: [] }),
+    );
+    await assertFails(dbFor(null).doc('dayRequirements/2026-09-13').get());
+  });
+});
+
+describe('trainingSessions', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc('trainingSessions/tr1').set({
+        certificationId: 'certC',
+        type: 'tutoring',
+        traineeId: 'emp1',
+        trainerIds: ['other'],
+        start: new Date('2026-09-13T10:00:00Z'),
+        end: new Date('2026-09-13T12:00:00Z'),
+        dayKey: '2026-09-13',
+        priority: 2,
+      });
+      await context.firestore().doc('trainingSessions/tr2').set({
+        certificationId: 'certC',
+        type: 'tutoring',
+        traineeId: 'stranger',
+        trainerIds: ['other'],
+        start: new Date('2026-09-13T10:00:00Z'),
+        end: new Date('2026-09-13T12:00:00Z'),
+        dayKey: '2026-09-13',
+        priority: 2,
+      });
+    });
+  });
+
+  it('participants read their sessions; outsiders cannot', async () => {
+    await assertSucceeds(dbFor(EMPLOYEE).doc('trainingSessions/tr1').get());
+    await assertFails(dbFor(EMPLOYEE).doc('trainingSessions/tr2').get());
+    await assertSucceeds(
+      dbFor({ uid: 'other', token: { role: 'employee' } })
+        .doc('trainingSessions/tr2')
+        .get(),
+    );
+  });
+
+  it('only managers write sessions', async () => {
+    await assertFails(
+      dbFor(EMPLOYEE).doc('trainingSessions/tr1').update({ priority: 9 }),
+    );
+    await assertSucceeds(
+      dbFor(MANAGER).doc('trainingSessions/tr1').update({ priority: 9 }),
+    );
+    await assertSucceeds(dbFor(MANAGER).doc('trainingSessions/tr2').delete());
+  });
+});

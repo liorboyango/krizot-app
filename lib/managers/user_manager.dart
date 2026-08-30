@@ -6,10 +6,12 @@ import 'package:rxdart/rxdart.dart';
 
 import '../app_config/service_locator.dart';
 import '../entities/app_user.dart';
+import '../managers/availability_manager.dart';
 import '../managers/dispatch_manager.dart';
 import '../managers/notifications_manager.dart';
 import '../managers/shifts_manager.dart';
 import '../managers/stations_manager.dart';
+import '../managers/training_manager.dart';
 import '../services/user_service.dart';
 
 /// Orchestrator: follows Firebase auth state, mirrors the `users/{uid}` doc,
@@ -93,6 +95,8 @@ class UserManager {
     _log.info('$METHOD - role: ${appUser.role.name}');
     await locator<StationsManager>().initListeners(appUser.id);
     await locator<ShiftsManager>().initListeners(appUser);
+    await locator<AvailabilityManager>().initListeners(appUser);
+    await locator<TrainingManager>().initListeners(appUser);
     await locator<DispatchManager>().initListeners(appUser);
     await locator<NotificationsManager>().initPushNotifications(appUser.id);
   }
@@ -104,6 +108,8 @@ class UserManager {
     if (locator.isRegistered<StationsManager>()) {
       locator<StationsManager>().cancelListeners();
       locator<ShiftsManager>().cancelListeners();
+      locator<AvailabilityManager>().cancelListeners();
+      locator<TrainingManager>().cancelListeners();
       locator<DispatchManager>().cancelListeners();
     }
   }

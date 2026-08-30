@@ -3,15 +3,33 @@ import 'package:flutter/material.dart';
 import '../../../../app_config/l10n/gen/app_localizations.dart';
 import '../../../../app_config/service_locator.dart';
 import '../../../../entities/app_user.dart';
+import '../../../../managers/availability_manager.dart';
 import '../../../../managers/shifts_manager.dart';
 import '../../../../managers/stations_manager.dart';
 import '../../../../utils/app_colors.dart';
 import '../../../../utils/l10n_util.dart';
+import '../../../../utils/time_util.dart';
+import 'user_schedule_dialog.dart';
 
 /// Desktop drag-and-drop source: staff chips draggable onto shift cells.
 /// Sick/unavailable staff are shown flagged and are not draggable.
-class EmployeeRosterPanel extends StatelessWidget {
+/// Searchable; tapping a chip opens the user's weekly schedule.
+class EmployeeRosterPanel extends StatefulWidget {
   const EmployeeRosterPanel({super.key});
+
+  @override
+  State<EmployeeRosterPanel> createState() => _EmployeeRosterPanelState();
+}
+
+class _EmployeeRosterPanelState extends State<EmployeeRosterPanel> {
+  final searchController = TextEditingController();
+  String query = '';
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +61,20 @@ class EmployeeRosterPanel extends StatelessWidget {
                   fontSize: 11, color: AppColors.textSecondary),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                hintText: AppLocalizations.of(context)!.searchStaffHint,
+                prefixIcon: const Icon(Icons.search, size: 18),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+              style: const TextStyle(fontSize: 13),
+              onChanged: (value) => setState(() => query = value),
+            ),
+          ),
           const SizedBox(height: 8),
           Expanded(
             child: StreamBuilder<List<AppUser>>(
@@ -50,10 +82,18 @@ class EmployeeRosterPanel extends StatelessWidget {
               stream: shiftsManager.employeesStream,
               builder: (context, snapshot) {
                 final users = snapshot.data ?? const [];
+                final trimmed = query.trim().toLowerCase();
+                final visible = trimmed.isEmpty
+                    ? users
+                    : users
+                        .where((u) =>
+                            u.displayName.toLowerCase().contains(trimmed) ||
+                            u.email.toLowerCase().contains(trimmed))
+                        .toList();
                 return ListView(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                   children: [
-                    for (final user in users) _RosterChip(user: user),
+                    for (final user in visible) _RosterChip(user: user),
                   ],
                 );
               },
@@ -93,50 +133,74 @@ class _RosterChip extends StatelessWidget {
       UserStatus.sick => AppColors.warning,
       UserStatus.unavailable => AppColors.danger,
     };
-    return Container(
-      width: 206,
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: dragging ? AppColors.tableRowHover : AppColors.background,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
-        boxShadow: dragging
-            ? [const BoxShadow(color: Colors.black26, blurRadius: 8)]
-            : null,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration:
-                BoxDecoration(color: statusColor, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user.displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  user.isAvailable
-                      ? l10n.certificationCount(certCount)
-                      : L10nUtil.statusLabel(l10n, user.status),
-                  style: const TextStyle(
-                      fontSize: 11, color: AppColors.textSecondary),
-                ),
-              ],
+    final shiftsManager = locator<ShiftsManager>();
+    final availabilityManager = locator<AvailabilityManager>();
+    final selectedDay = TimeUtil.startOfDay(shiftsManager.selectedDate);
+    // Off-site on the selected day: the user keeps a presence calendar but
+    // has no window touching that day.
+    final offSite = availabilityManager.windowsForUser(user.id).isNotEmpty &&
+        availabilityManager.windowsForUserDay(user.id, selectedDay).isEmpty;
+    final subtitle = [
+      if (user.courseNumber != null) l10n.courseTag(user.courseNumber!),
+      user.isAvailable
+          ? l10n.certificationCount(certCount)
+          : L10nUtil.statusLabel(l10n, user.status),
+      if (offSite) l10n.offSiteTag,
+    ].join(' · ');
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => UserScheduleDialog.show(context, user),
+      child: Container(
+        width: 206,
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: dragging ? AppColors.tableRowHover : AppColors.background,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+          boxShadow: dragging
+              ? [const BoxShadow(color: Colors.black26, blurRadius: 8)]
+              : null,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration:
+                  BoxDecoration(color: statusColor, shape: BoxShape.circle),
             ),
-          ),
-          _CertBadges(user: user),
-        ],
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            if (offSite)
+              const Padding(
+                padding: EdgeInsetsDirectional.only(end: 4),
+                child: Icon(Icons.event_busy,
+                    size: 16, color: AppColors.warning),
+              ),
+            _CertBadges(user: user),
+          ],
+        ),
       ),
     );
   }

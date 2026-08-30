@@ -12,9 +12,11 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { COLLECTION_SHIFTS, REGION } from '../constants';
 import {
   getDb,
+  loadAvailabilityOverlapping,
   loadLlmConfig,
   loadShiftsForDay,
   loadStations,
+  loadTrainingForDay,
   loadUsers,
   shiftFromDoc,
 } from '../domain/firestore';
@@ -48,12 +50,15 @@ export const suggestReplacement = onCall(
       shiftSnapshot as FirebaseFirestore.QueryDocumentSnapshot,
     );
 
-    const [config, users, stations, dayShifts] = await Promise.all([
-      loadLlmConfig(),
-      loadUsers(),
-      loadStations(),
-      loadShiftsForDay(shift.dayKey),
-    ]);
+    const [config, users, stations, dayShifts, availability, trainingSessions] =
+      await Promise.all([
+        loadLlmConfig(),
+        loadUsers(),
+        loadStations(),
+        loadShiftsForDay(shift.dayKey),
+        loadAvailabilityOverlapping(shift.startMs, shift.endMs),
+        loadTrainingForDay(shift.dayKey),
+      ]);
 
     // Evaluate the shift as if open, excluding its current (dropped) assignee.
     const openShift: ShiftRecord = { ...shift, userId: null };
@@ -62,6 +67,8 @@ export const suggestReplacement = onCall(
       stations,
       shifts: dayShifts.map((s) => (s.id === shift.id ? openShift : s)),
       maxDailyHours: config.maxDailyHours,
+      availability,
+      trainingSessions,
     };
     const candidates = eligibleUsers(openShift, context);
     if (candidates.length === 0) {
