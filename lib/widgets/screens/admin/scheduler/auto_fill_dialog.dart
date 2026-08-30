@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app_config/l10n/gen/app_localizations.dart';
 import '../../../../app_config/service_locator.dart';
 import '../../../../services/functions_service.dart';
 import '../../../../utils/app_colors.dart';
 import '../../../../utils/time_util.dart';
 
-/// Runs the AI Auto-Fill callable for one day and shows the outcome.
+/// Runs the AI Auto-Fill callable for one day and shows the outcome. An
+/// optional free-text prompt is forwarded to the LLM as manager guidance.
 class AutoFillDialog extends StatefulWidget {
   final DateTime day;
 
@@ -23,17 +25,27 @@ class AutoFillDialog extends StatefulWidget {
 }
 
 class _AutoFillDialogState extends State<AutoFillDialog> {
+  final promptController = TextEditingController();
   bool isRunning = false;
   Map<String, dynamic>? result;
   bool failed = false;
+
+  @override
+  void dispose() {
+    promptController.dispose();
+    super.dispose();
+  }
 
   Future<void> onRunPressed() async {
     setState(() {
       isRunning = true;
       failed = false;
     });
-    final response = await locator<FunctionsService>()
-        .autoFillSchedule(TimeUtil.dayKey(widget.day));
+    final instructions = promptController.text.trim();
+    final response = await locator<FunctionsService>().autoFillSchedule(
+      TimeUtil.dayKey(widget.day),
+      instructions: instructions.isEmpty ? null : instructions,
+    );
     if (!mounted) return;
     setState(() {
       isRunning = false;
@@ -44,9 +56,10 @@ class _AutoFillDialogState extends State<AutoFillDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final unfilled = (result?['unfilled'] as List?) ?? const [];
     return AlertDialog(
-      title: const Text('AI Auto-Fill'),
+      title: Text(l10n.aiAutoFillTitle),
       content: SizedBox(
         width: 380,
         child: Column(
@@ -54,29 +67,42 @@ class _AutoFillDialogState extends State<AutoFillDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Fill all open shifts on '
-              '${TimeUtil.formatDayLabel(widget.day)} using staff '
-              'availability and certifications.',
+              l10n.autoFillExplainer(TimeUtil.formatDayLabel(widget.day)),
               style: const TextStyle(color: AppColors.textSecondary),
             ),
+            if (result == null) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: promptController,
+                enabled: !isRunning,
+                minLines: 2,
+                maxLines: 4,
+                maxLength: 1000,
+                decoration: InputDecoration(
+                  labelText: l10n.aiInstructionsLabel,
+                  hintText: l10n.aiInstructionsHint,
+                  border: const OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             if (isRunning)
-              const Row(
+              Row(
                 children: [
-                  SizedBox(
+                  const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  SizedBox(width: 12),
-                  Text('Planning schedule…'),
+                  const SizedBox(width: 12),
+                  Text(l10n.planningSchedule),
                 ],
               ),
             if (failed)
-              const Text(
-                'Auto-fill failed — check that the Cloud Function is deployed '
-                'and an LLM API key is configured.',
-                style: TextStyle(color: AppColors.danger),
+              Text(
+                l10n.autoFillFailed,
+                style: const TextStyle(color: AppColors.danger),
               ),
             if (result != null) ...[
               Row(
@@ -85,8 +111,10 @@ class _AutoFillDialogState extends State<AutoFillDialog> {
                       color: AppColors.success, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    'Filled ${result!['filled']} shift(s)'
-                    '${unfilled.isEmpty ? '' : ', ${unfilled.length} left open'}',
+                    l10n.filledShifts((result!['filled'] as num).toInt()) +
+                        (unfilled.isEmpty
+                            ? ''
+                            : l10n.leftOpen(unfilled.length)),
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ],
@@ -106,13 +134,13 @@ class _AutoFillDialogState extends State<AutoFillDialog> {
       actions: [
         TextButton(
           onPressed: isRunning ? null : () => Navigator.pop(context),
-          child: Text(result == null ? 'Cancel' : 'Close'),
+          child: Text(result == null ? l10n.cancel : l10n.close),
         ),
         if (result == null)
           FilledButton.icon(
             onPressed: isRunning ? null : onRunPressed,
             icon: const Icon(Icons.auto_awesome, size: 18),
-            label: const Text('Run Auto-Fill'),
+            label: Text(l10n.runAutoFill),
           ),
       ],
     );

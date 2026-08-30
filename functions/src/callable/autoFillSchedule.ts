@@ -35,6 +35,12 @@ export const autoFillSchedule = onCall(
     if (!dayKey || !/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) {
       throw new HttpsError('invalid-argument', 'date must be YYYY-MM-DD.');
     }
+    const rawInstructions = request.data?.instructions;
+    if (rawInstructions !== undefined && typeof rawInstructions !== 'string') {
+      throw new HttpsError('invalid-argument', 'instructions must be a string.');
+    }
+    // Advisory manager guidance for the LLM — hard constraints still win.
+    const instructions = rawInstructions?.trim().slice(0, 2000) || undefined;
 
     const [config, users, stations, shifts] = await Promise.all([
       loadLlmConfig(),
@@ -63,7 +69,7 @@ export const autoFillSchedule = onCall(
           config,
           schema: AutoFillPlanSchema,
           system: AUTO_FILL_SYSTEM,
-          prompt: buildAutoFillPrompt(context, dayKey, violations),
+          prompt: buildAutoFillPrompt(context, dayKey, violations, instructions),
         });
         notes = plan.notes;
         const result = validatePlan(

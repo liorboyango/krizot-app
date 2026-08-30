@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../app_config/l10n/gen/app_localizations.dart';
 import '../../../app_config/service_locator.dart';
 import '../../../entities/certification.dart';
 import '../../../entities/event_type.dart';
@@ -20,6 +21,7 @@ class EventTypesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final dispatchManager = locator<DispatchManager>();
     final canEdit = locator<UserManager>().role?.canManage ?? false;
     return Scaffold(
@@ -30,17 +32,17 @@ class EventTypesScreen extends StatelessWidget {
               backgroundColor: AppColors.accent,
               foregroundColor: Colors.white,
               icon: const Icon(Icons.add),
-              label: const Text('New Event Type'),
+              label: Text(l10n.newEventType),
             )
           : null,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(24, 24, 24, 12),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
             child: Text(
-              'Event Types',
-              style: TextStyle(
+              l10n.eventTypesTitle,
+              style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
@@ -54,11 +56,10 @@ class EventTypesScreen extends StatelessWidget {
               builder: (context, snapshot) {
                 final types = snapshot.data ?? const <EventType>[];
                 if (types.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Text(
-                      'No scenarios yet — e.g. "Event Type C" alerting all '
-                      'Type C Responders.',
-                      style: TextStyle(color: AppColors.textSecondary),
+                      l10n.noScenariosYet,
+                      style: const TextStyle(color: AppColors.textSecondary),
                     ),
                   );
                 }
@@ -88,6 +89,7 @@ class _EventTypeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final stationsManager = locator<StationsManager>();
     final certNames = eventType.responderCertifications
         .map((id) => stationsManager.certificationById(id)?.name ?? id)
@@ -111,19 +113,20 @@ class _EventTypeTile extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(width: 8),
             if (!eventType.active)
-              const Text('(inactive)',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+              Text(l10n.inactiveTag,
+                  style: const TextStyle(
+                      color: AppColors.textMuted, fontSize: 12)),
           ],
         ),
         subtitle: Text(
           [
-            'Responders: ${certNames.isEmpty ? '—' : certNames}',
-            if (stationNames.isNotEmpty) 'Stations: $stationNames',
+            l10n.respondersLabel(certNames.isEmpty ? '—' : certNames),
+            if (stationNames.isNotEmpty) l10n.stationsLabel(stationNames),
           ].join('  ·  '),
         ),
         trailing: canEdit
             ? IconButton(
-                tooltip: 'Edit',
+                tooltip: l10n.edit,
                 icon: const Icon(Icons.edit_outlined, size: 20),
                 onPressed: () =>
                     _EventTypeEditorDialog.show(context, eventType: eventType),
@@ -177,7 +180,7 @@ class _EventTypeEditorDialogState extends State<_EventTypeEditorDialog> {
     if (certIds.isEmpty) {
       SnackBarUtil.showSnackBar(
           context,
-          'Pick at least one responder certification.',
+          AppLocalizations.of(context)!.pickOneResponderCert,
           Variant.WARNING);
       return;
     }
@@ -203,16 +206,17 @@ class _EventTypeEditorDialogState extends State<_EventTypeEditorDialog> {
     if (success) {
       Navigator.pop(context);
     } else {
-      SnackBarUtil.showSnackBar(
-          context, 'Failed to save event type.', Variant.ERROR);
+      SnackBarUtil.showSnackBar(context,
+          AppLocalizations.of(context)!.failedToSaveEventType, Variant.ERROR);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final stationsManager = locator<StationsManager>();
     return AlertDialog(
-      title: Text(isEditing ? 'Edit Event Type' : 'New Event Type'),
+      title: Text(isEditing ? l10n.editEventType : l10n.newEventType),
       content: SizedBox(
         width: 440,
         child: Form(
@@ -225,36 +229,38 @@ class _EventTypeEditorDialogState extends State<_EventTypeEditorDialog> {
                 TextFormField(
                   controller: nameController,
                   decoration:
-                      const InputDecoration(labelText: 'Name (e.g. Event Type C)'),
+                      InputDecoration(labelText: l10n.eventTypeNameLabel),
                   validator: (value) => (value == null || value.trim().isEmpty)
-                      ? 'Name is required'
+                      ? l10n.nameRequired
                       : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: descriptionController,
-                  decoration: const InputDecoration(labelText: 'Description'),
+                  decoration:
+                      InputDecoration(labelText: l10n.descriptionLabel),
                   maxLines: 2,
                 ),
                 const SizedBox(height: 16),
-                const Text('Priority',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
+                Text(l10n.priorityLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 SegmentedButton<EventPriority>(
-                  segments: const [
+                  segments: [
                     ButtonSegment(
-                        value: EventPriority.high, label: Text('High')),
+                        value: EventPriority.high,
+                        label: Text(l10n.priorityHigh)),
                     ButtonSegment(
                         value: EventPriority.critical,
-                        label: Text('Critical')),
+                        label: Text(l10n.priorityCritical)),
                   ],
                   selected: {priority},
                   onSelectionChanged: (selection) =>
                       setState(() => priority = selection.first),
                 ),
                 const SizedBox(height: 16),
-                const Text('Responder certifications (holder of ANY)',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
+                Text(l10n.responderCertsAnyLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 StreamBuilder<List<Certification>>(
                   initialData: stationsManager.certifications,
@@ -262,10 +268,9 @@ class _EventTypeEditorDialogState extends State<_EventTypeEditorDialog> {
                   builder: (context, snapshot) {
                     final certifications = snapshot.data ?? const [];
                     if (certifications.isEmpty) {
-                      return const Text(
-                        'No certifications defined — add them on the Staff '
-                        'screen first.',
-                        style: TextStyle(
+                      return Text(
+                        l10n.noCertsDefinedStaffFirst,
+                        style: const TextStyle(
                             color: AppColors.textSecondary, fontSize: 13),
                       );
                     }
@@ -290,8 +295,8 @@ class _EventTypeEditorDialogState extends State<_EventTypeEditorDialog> {
                   },
                 ),
                 const SizedBox(height: 16),
-                const Text('Stations involved',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
+                Text(l10n.stationsInvolved,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 StreamBuilder<List<Station>>(
                   initialData: stationsManager.stations,
@@ -321,9 +326,8 @@ class _EventTypeEditorDialogState extends State<_EventTypeEditorDialog> {
                 const SizedBox(height: 16),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Active'),
-                  subtitle: const Text(
-                      'Inactive scenarios are hidden from the dispatch board'),
+                  title: Text(l10n.eventTypeActive),
+                  subtitle: Text(l10n.inactiveHiddenFromBoard),
                   value: active,
                   onChanged: (value) => setState(() => active = value),
                 ),
@@ -335,11 +339,12 @@ class _EventTypeEditorDialogState extends State<_EventTypeEditorDialog> {
       actions: [
         TextButton(
           onPressed: isBusy ? null : () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: isBusy ? null : onSavePressed,
-          child: Text(isBusy ? 'Saving…' : (isEditing ? 'Save' : 'Create')),
+          child: Text(
+              isBusy ? l10n.saving : (isEditing ? l10n.save : l10n.create)),
         ),
       ],
     );

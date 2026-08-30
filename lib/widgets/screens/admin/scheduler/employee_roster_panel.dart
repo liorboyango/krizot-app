@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app_config/l10n/gen/app_localizations.dart';
 import '../../../../app_config/service_locator.dart';
 import '../../../../entities/app_user.dart';
 import '../../../../managers/shifts_manager.dart';
 import '../../../../managers/stations_manager.dart';
 import '../../../../utils/app_colors.dart';
+import '../../../../utils/l10n_util.dart';
 
 /// Desktop drag-and-drop source: staff chips draggable onto shift cells.
 /// Sick/unavailable staff are shown flagged and are not draggable.
@@ -23,21 +25,22 @@ class EmployeeRosterPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
-              'Staff',
-              style: TextStyle(
+              AppLocalizations.of(context)!.staffTitle,
+              style: const TextStyle(
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
               ),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'Drag onto a shift to assign',
-              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              AppLocalizations.of(context)!.dragToAssign,
+              style: const TextStyle(
+                  fontSize: 11, color: AppColors.textSecondary),
             ),
           ),
           const SizedBox(height: 8),
@@ -83,6 +86,7 @@ class _RosterChip extends StatelessWidget {
   }
 
   Widget _chipContent(BuildContext context, {required bool dragging}) {
+    final l10n = AppLocalizations.of(context)!;
     final certCount = user.certifications.length;
     final statusColor = switch (user.status) {
       UserStatus.available => AppColors.success,
@@ -123,8 +127,8 @@ class _RosterChip extends StatelessWidget {
                 ),
                 Text(
                   user.isAvailable
-                      ? '$certCount certification${certCount == 1 ? '' : 's'}'
-                      : user.status.name,
+                      ? l10n.certificationCount(certCount)
+                      : L10nUtil.statusLabel(l10n, user.status),
                   style: const TextStyle(
                       fontSize: 11, color: AppColors.textSecondary),
                 ),

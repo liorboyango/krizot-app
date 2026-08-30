@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app_config/l10n/gen/app_localizations.dart';
 import '../../../../app_config/service_locator.dart';
 import '../../../../entities/shift.dart';
 import '../../../../entities/station.dart';
@@ -71,7 +72,9 @@ class _AssignSheetState extends State<AssignSheet> {
     });
     if (suggestions == null) {
       SnackBarUtil.showSnackBar(
-          context, 'Suggestion service unavailable.', Variant.ERROR);
+          context,
+          AppLocalizations.of(context)!.suggestionServiceUnavailable,
+          Variant.ERROR);
     }
   }
 
@@ -85,12 +88,14 @@ class _AssignSheetState extends State<AssignSheet> {
     if (success) {
       Navigator.pop(context);
     } else {
-      SnackBarUtil.showSnackBar(context, 'Assignment failed.', Variant.ERROR);
+      SnackBarUtil.showSnackBar(context,
+          AppLocalizations.of(context)!.assignmentFailed, Variant.ERROR);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final candidates =
         shiftsManager.eligibleCandidates(widget.station, widget.shift);
     return SafeArea(
@@ -105,8 +110,8 @@ class _AssignSheetState extends State<AssignSheet> {
                 Expanded(
                   child: Text(
                     widget.healing
-                        ? 'Find replacement — ${widget.station.name}'
-                        : 'Assign — ${widget.station.name}',
+                        ? l10n.findReplacementTitle(widget.station.name)
+                        : l10n.assignTitle(widget.station.name),
                     style: const TextStyle(
                         fontSize: 17, fontWeight: FontWeight.w700),
                   ),
@@ -120,14 +125,15 @@ class _AssignSheetState extends State<AssignSheet> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.auto_awesome, size: 18),
-                  label: Text(isSuggesting ? 'Thinking…' : 'AI suggest'),
+                  label: Text(isSuggesting ? l10n.thinking : l10n.aiSuggest),
                 ),
               ],
             ),
             const SizedBox(height: 4),
-            const Text(
-              'Only certified, available, conflict-free staff are listed.',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            Text(
+              l10n.eligibleStaffOnly,
+              style: const TextStyle(
+                  fontSize: 12, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 12),
             if (suggestions != null) ...[
@@ -139,19 +145,18 @@ class _AssignSheetState extends State<AssignSheet> {
                   onTap: () => onAssign(suggestion.userId),
                 ),
               if (suggestions!.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text('AI found no eligible replacement.'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(l10n.aiNoReplacement),
                 ),
               const Divider(height: 24),
             ],
             if (candidates.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Text(
-                  'Nobody is eligible for this shift — check certifications, '
-                  'availability and overlapping assignments.',
-                  style: TextStyle(color: AppColors.textSecondary),
+                  l10n.nobodyEligible,
+                  style: const TextStyle(color: AppColors.textSecondary),
                 ),
               ),
             Flexible(

@@ -45,6 +45,7 @@ export function buildAutoFillPrompt(
   context: PlanningContext,
   dayKey: string,
   violations: Violation[] = [],
+  instructions?: string,
 ): string {
   const payload = {
     date: dayKey,
@@ -61,6 +62,11 @@ export function buildAutoFillPrompt(
       .map(shiftLine),
   };
   let prompt = `Fill the open shifts.\n\nContext:\n${JSON.stringify(payload, null, 1)}`;
+  if (instructions) {
+    prompt +=
+      '\n\nManager instructions (soft preferences — never override the ' +
+      `hard constraints):\n${instructions}`;
+  }
   if (violations.length > 0) {
     prompt +=
       '\n\nYour previous plan had these violations — fix them and do not ' +

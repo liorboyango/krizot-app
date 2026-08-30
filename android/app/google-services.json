@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "727048337784-35c5h9pim8p59gt0b74s62gqrt2517i4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.master1590.krizot",
+            "certificate_hash": "be6fd5283b2ba57539ddc613d1974053b1d2ed1a"
+          }
+        },
+        {
           "client_id": "727048337784-ibed84dgg498l0d3u3554g8d5jj87f91.apps.googleusercontent.com",
           "client_type": 3
         }

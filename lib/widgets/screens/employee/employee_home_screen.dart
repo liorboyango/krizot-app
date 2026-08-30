@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../app_config/l10n/gen/app_localizations.dart';
 import '../../../app_config/service_locator.dart';
 import '../../../entities/app_user.dart';
 import '../../../entities/emergency_event.dart';
@@ -30,6 +31,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -39,11 +41,11 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
           initialData: userManager.user,
           stream: userManager.onUserChanged,
           builder: (context, snapshot) =>
-              Text('Hi, ${snapshot.data?.displayName ?? ''}'),
+              Text(l10n.hiUser(snapshot.data?.displayName ?? '')),
         ),
         actions: [
           IconButton(
-            tooltip: 'Sign out',
+            tooltip: l10n.signOut,
             icon: const Icon(Icons.logout),
             onPressed: () => userManager.signOut(),
           ),
@@ -65,32 +67,33 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
               const _EmergencyBanners(),
               if (current != null)
                 _FocusCard(
-                  title: 'CURRENT ASSIGNMENT',
+                  title: l10n.currentAssignment,
                   shift: current,
                   color: AppColors.success,
                 ),
               if (next != null) ...[
                 const SizedBox(height: 12),
                 _FocusCard(
-                  title: 'UPCOMING ASSIGNMENT',
+                  title: l10n.upcomingAssignment,
                   shift: next,
                   color: AppColors.accent,
                 ),
               ],
               if (current == null && next == null)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 48),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 48),
                   child: Center(
                     child: Text(
-                      'No upcoming assignments.',
-                      style: TextStyle(color: AppColors.textSecondary),
+                      l10n.noUpcomingAssignments,
+                      style:
+                          const TextStyle(color: AppColors.textSecondary),
                     ),
                   ),
                 ),
               const SizedBox(height: 24),
-              const Text(
-                'My schedule',
-                style: TextStyle(
+              Text(
+                l10n.mySchedule,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
@@ -142,6 +145,7 @@ class _EmergencyBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final dispatchManager = locator<DispatchManager>();
     return StreamBuilder<bool>(
       stream: dispatchManager.myAckStreamFor(event.id, uid),
@@ -162,16 +166,14 @@ class _EmergencyBanner extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'EMERGENCY: ${event.eventTypeName}',
+                        l10n.emergencyBanner(event.eventTypeName),
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       Text(
-                        acked
-                            ? 'Acknowledged — stand by.'
-                            : 'You are needed. Acknowledge now.',
+                        acked ? l10n.ackStandBy : l10n.youAreNeeded,
                         style: const TextStyle(
                             color: Colors.white, fontSize: 12),
                       ),
@@ -189,10 +191,10 @@ class _EmergencyBanner extends StatelessWidget {
                           .acknowledgeEmergency(event.id, uid);
                       if (!success && context.mounted) {
                         SnackBarUtil.showSnackBar(context,
-                            'Failed to acknowledge.', Variant.ERROR);
+                            l10n.failedToAcknowledge, Variant.ERROR);
                       }
                     },
-                    child: const Text('ACKNOWLEDGE'),
+                    child: Text(l10n.acknowledgeAction),
                   )
                 else
                   const Icon(Icons.check_circle, color: Colors.white),
@@ -335,7 +337,9 @@ class _AcknowledgeButtonState extends State<_AcknowledgeButton> {
     setState(() => isBusy = false);
     if (!success) {
       SnackBarUtil.showSnackBar(
-          context, 'Failed to acknowledge — try again.', Variant.ERROR);
+          context,
+          AppLocalizations.of(context)!.failedToAcknowledgeRetry,
+          Variant.ERROR);
     }
   }
 
@@ -345,7 +349,7 @@ class _AcknowledgeButtonState extends State<_AcknowledgeButton> {
       onPressed: isBusy ? null : onPressed,
       style: FilledButton.styleFrom(backgroundColor: AppColors.success),
       icon: const Icon(Icons.check, size: 18),
-      label: Text(isBusy ? '…' : 'Acknowledge'),
+      label: Text(isBusy ? '…' : AppLocalizations.of(context)!.acknowledge),
     );
   }
 }

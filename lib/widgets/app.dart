@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
+import '../app_config/l10n/gen/app_localizations.dart';
 import '../app_config/route_generator.dart';
 import '../app_config/service_locator.dart';
 import '../utils/app_theme.dart';
@@ -17,9 +19,17 @@ class _KrizotAppState extends State<KrizotApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Krizot',
+      onGenerateTitle: (context) => AppLocalizations.of(context)!.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      locale: const Locale('he'),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       routerConfig: router,
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app_config/l10n/gen/app_localizations.dart';
 import '../../utils/app_colors.dart';
 
 class SplashScreen extends StatelessWidget {
@@ -10,24 +11,24 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: AppColors.primary,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.calendar_month, size: 64, color: Colors.white),
-            SizedBox(height: 16),
+            const Icon(Icons.calendar_month, size: 64, color: Colors.white),
+            const SizedBox(height: 16),
             Text(
-              'Krizot',
-              style: TextStyle(
+              AppLocalizations.of(context)!.appName,
+              style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
               ),
             ),
-            SizedBox(height: 32),
-            SizedBox(
+            const SizedBox(height: 32),
+            const SizedBox(
               width: 28,
               height: 28,
               child: CircularProgressIndicator(

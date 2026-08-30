@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app_config/l10n/gen/app_localizations.dart';
 import '../entities/station.dart';
 import '../utils/app_colors.dart';
 
@@ -18,17 +19,19 @@ class StatusChip extends StatelessWidget {
   });
 
   /// Create a chip from a [StationStatus].
-  factory StatusChip.fromStationStatus(StationStatus status) {
+  factory StatusChip.fromStationStatus(
+      BuildContext context, StationStatus status) {
+    final l10n = AppLocalizations.of(context)!;
     switch (status) {
       case StationStatus.active:
-        return const StatusChip(
-          label: 'Active',
+        return StatusChip(
+          label: l10n.stationActive,
           backgroundColor: AppColors.shiftCovered,
           textColor: AppColors.success,
         );
       case StationStatus.closed:
-        return const StatusChip(
-          label: 'Closed',
+        return StatusChip(
+          label: l10n.stationClosed,
           backgroundColor: AppColors.shiftCritical,
           textColor: AppColors.danger,
         );
@@ -36,25 +39,25 @@ class StatusChip extends StatelessWidget {
   }
 
   /// Create a chip for shift coverage status.
-  factory StatusChip.covered() {
-    return const StatusChip(
-      label: 'Covered',
+  factory StatusChip.covered(BuildContext context) {
+    return StatusChip(
+      label: AppLocalizations.of(context)!.chipCovered,
       backgroundColor: AppColors.shiftCovered,
       textColor: AppColors.success,
     );
   }
 
-  factory StatusChip.open() {
-    return const StatusChip(
-      label: 'Open',
+  factory StatusChip.open(BuildContext context) {
+    return StatusChip(
+      label: AppLocalizations.of(context)!.chipOpen,
       backgroundColor: AppColors.shiftOpen,
       textColor: AppColors.warning,
     );
   }
 
-  factory StatusChip.critical() {
-    return const StatusChip(
-      label: 'Critical',
+  factory StatusChip.critical(BuildContext context) {
+    return StatusChip(
+      label: AppLocalizations.of(context)!.chipCritical,
       backgroundColor: AppColors.shiftCritical,
       textColor: AppColors.danger,
     );

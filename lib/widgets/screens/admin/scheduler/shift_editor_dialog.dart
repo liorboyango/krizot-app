@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app_config/l10n/gen/app_localizations.dart';
 import '../../../../app_config/service_locator.dart';
 import '../../../../entities/shift.dart';
 import '../../../../entities/station.dart';
@@ -107,16 +108,17 @@ class _ShiftEditorDialogState extends State<ShiftEditorDialog> {
     if (success) {
       Navigator.pop(context);
     } else {
-      SnackBarUtil.showSnackBar(
-          context, 'Failed to save shift.', Variant.ERROR);
+      SnackBarUtil.showSnackBar(context,
+          AppLocalizations.of(context)!.failedToSaveShift, Variant.ERROR);
     }
   }
 
   Future<void> pickTime({required bool isStart}) async {
+    final l10n = AppLocalizations.of(context)!;
     final picked = await showTimePicker(
       context: context,
       initialTime: isStart ? start : end,
-      helpText: isStart ? 'Shift start' : 'Shift end',
+      helpText: isStart ? l10n.shiftStart : l10n.shiftEnd,
     );
     if (picked == null) return;
     setState(() {
@@ -130,10 +132,11 @@ class _ShiftEditorDialogState extends State<ShiftEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
       title: Text(isEditing
-          ? 'Edit shift — ${widget.station.name}'
-          : 'New shift — ${widget.station.name}'),
+          ? l10n.editShiftTitle(widget.station.name)
+          : l10n.newShiftTitle(widget.station.name)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,7 +152,7 @@ class _ShiftEditorDialogState extends State<ShiftEditorDialog> {
                 child: OutlinedButton.icon(
                   onPressed: () => pickTime(isStart: true),
                   icon: const Icon(Icons.schedule, size: 18),
-                  label: Text('Start ${start.format(context)}'),
+                  label: Text(l10n.startAt(start.format(context))),
                 ),
               ),
               const SizedBox(width: 12),
@@ -157,7 +160,7 @@ class _ShiftEditorDialogState extends State<ShiftEditorDialog> {
                 child: OutlinedButton.icon(
                   onPressed: () => pickTime(isStart: false),
                   icon: const Icon(Icons.schedule, size: 18),
-                  label: Text('End ${end.format(context)}'),
+                  label: Text(l10n.endAt(end.format(context))),
                 ),
               ),
             ],
@@ -167,11 +170,12 @@ class _ShiftEditorDialogState extends State<ShiftEditorDialog> {
       actions: [
         TextButton(
           onPressed: isBusy ? null : () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: isBusy ? null : onSavePressed,
-          child: Text(isBusy ? 'Saving…' : (isEditing ? 'Save' : 'Create')),
+          child: Text(
+              isBusy ? l10n.saving : (isEditing ? l10n.save : l10n.create)),
         ),
       ],
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app_config/l10n/gen/app_localizations.dart';
 import '../../../app_config/service_locator.dart';
 import '../../../entities/app_user.dart';
 import '../../../entities/shift.dart';
@@ -9,6 +10,7 @@ import '../../../managers/shifts_manager.dart';
 import '../../../managers/stations_manager.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/breakpoints.dart';
+import '../../../utils/l10n_util.dart';
 import '../../../utils/snackbar_util.dart';
 import '../../../utils/time_util.dart';
 import 'scheduler/assign_sheet.dart';
@@ -63,12 +65,11 @@ class _SchedulerScreenState extends State<SchedulerScreen> {
                           .where((s) => s.status == StationStatus.active)
                           .toList();
                       if (stations.isEmpty) {
-                        return const Center(
+                        return Center(
                           child: Text(
-                            'No active stations — create one on the '
-                            'Stations screen.',
-                            style:
-                                TextStyle(color: AppColors.textSecondary),
+                            AppLocalizations.of(context)!.noActiveStations,
+                            style: const TextStyle(
+                                color: AppColors.textSecondary),
                           ),
                         );
                       }
@@ -112,6 +113,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return StreamBuilder<DateTime>(
       initialData: shiftsManager.selectedDate,
       stream: shiftsManager.selectedDateStream,
@@ -121,9 +123,9 @@ class _Header extends StatelessWidget {
         final sunday = monday.add(const Duration(days: 6));
         return Row(
           children: [
-            const Text(
-              'Scheduler',
-              style: TextStyle(
+            Text(
+              l10n.schedulerTitle,
+              style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
@@ -131,7 +133,7 @@ class _Header extends StatelessWidget {
             ),
             const SizedBox(width: 24),
             IconButton(
-              tooltip: 'Previous week',
+              tooltip: l10n.previousWeek,
               icon: const Icon(Icons.chevron_left),
               onPressed: shiftsManager.previousWeek,
             ),
@@ -144,13 +146,13 @@ class _Header extends StatelessWidget {
               ),
             ),
             IconButton(
-              tooltip: 'Next week',
+              tooltip: l10n.nextWeek,
               icon: const Icon(Icons.chevron_right),
               onPressed: shiftsManager.nextWeek,
             ),
             TextButton(
               onPressed: () => shiftsManager.selectDate(DateTime.now()),
-              child: const Text('Today'),
+              child: Text(l10n.today),
             ),
             const Spacer(),
             FilledButton.icon(
@@ -161,13 +163,13 @@ class _Header extends StatelessWidget {
                   firstDate:
                       DateTime.now().subtract(const Duration(days: 1)),
                   lastDate: DateTime.now().add(const Duration(days: 365)),
-                  helpText: 'Auto-fill which day?',
+                  helpText: l10n.autoFillWhichDay,
                 );
                 if (day == null || !context.mounted) return;
                 await AutoFillDialog.show(context, day);
               },
               icon: const Icon(Icons.auto_awesome, size: 18),
-              label: const Text('Auto-Fill'),
+              label: Text(l10n.autoFill),
             ),
           ],
         );
@@ -206,10 +208,11 @@ class _WeekGrid extends StatelessWidget {
                   decoration:
                       const BoxDecoration(color: AppColors.tableHeader),
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.all(10),
-                      child: Text('Station',
-                          style: TextStyle(fontWeight: FontWeight.w700)),
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Text(AppLocalizations.of(context)!.stationColumn,
+                          style:
+                              const TextStyle(fontWeight: FontWeight.w700)),
                     ),
                     for (final day in days)
                       Padding(
@@ -239,7 +242,8 @@ class _WeekGrid extends StatelessWidget {
                                     fontWeight: FontWeight.w600)),
                             Text(
                               station.isAroundTheClock
-                                  ? '24/7'
+                                  ? AppLocalizations.of(context)!
+                                      .twentyFourSeven
                                   : station.activeWindows.join(', '),
                               style: const TextStyle(
                                 fontSize: 11,
@@ -339,8 +343,8 @@ class _ShiftChip extends StatelessWidget {
               needsHealing ? ShiftSource.healing : ShiftSource.manual,
         );
         if (!success && context.mounted) {
-          SnackBarUtil.showSnackBar(
-              context, 'Assignment failed.', Variant.ERROR);
+          SnackBarUtil.showSnackBar(context,
+              AppLocalizations.of(context)!.assignmentFailed, Variant.ERROR);
         }
       },
       builder: (context, candidates, rejected) {
@@ -392,7 +396,10 @@ class _ShiftChip extends StatelessWidget {
                       ),
                       Text(
                         assignee?.displayName ??
-                            (shift.isAssigned ? shift.userId! : 'Open'),
+                            (shift.isAssigned
+                                ? shift.userId!
+                                : AppLocalizations.of(context)!
+                                    .openShiftShort),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style:
@@ -420,6 +427,7 @@ class _ShiftChip extends StatelessWidget {
   void _showActions(
       BuildContext context, AppUser? assignee, bool needsHealing) {
     final shiftsManager = locator<ShiftsManager>();
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       routeSettings: const RouteSettings(name: 'shift_actions_sheet'),
@@ -434,17 +442,17 @@ class _ShiftChip extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               subtitle: Text(assignee == null
-                  ? 'Open shift'
-                  : 'Assigned to ${assignee.displayName}'
-                      '${needsHealing ? ' (${assignee.status.name}!)' : ''}'
-                      '${shift.acknowledged ? ' · acknowledged ✓' : ' · not acknowledged yet'}'),
+                  ? l10n.openShift
+                  : '${l10n.assignedTo(assignee.displayName)}'
+                      '${needsHealing ? ' (${L10nUtil.statusLabel(l10n, assignee.status)}!)' : ''}'
+                      ' · ${shift.acknowledged ? l10n.acknowledgedCheck : l10n.notAcknowledgedYet}'),
             ),
             const Divider(height: 1),
             if (needsHealing)
               ListTile(
                 leading:
                     const Icon(Icons.healing, color: AppColors.danger),
-                title: const Text('Find replacement (AI)'),
+                title: Text(l10n.findReplacementAi),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   AssignSheet.show(context,
@@ -453,7 +461,7 @@ class _ShiftChip extends StatelessWidget {
               ),
             ListTile(
               leading: const Icon(Icons.person_add_alt),
-              title: Text(shift.isAssigned ? 'Reassign' : 'Assign'),
+              title: Text(shift.isAssigned ? l10n.reassign : l10n.assign),
               onTap: () {
                 Navigator.pop(sheetContext);
                 AssignSheet.show(context, shift: shift, station: station);
@@ -461,7 +469,7 @@ class _ShiftChip extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.schedule),
-              title: const Text('Edit times'),
+              title: Text(l10n.editTimes),
               onTap: () {
                 Navigator.pop(sheetContext);
                 ShiftEditorDialog.show(context,
@@ -471,7 +479,7 @@ class _ShiftChip extends StatelessWidget {
             if (shift.isAssigned)
               ListTile(
                 leading: const Icon(Icons.person_remove_outlined),
-                title: const Text('Unassign'),
+                title: Text(l10n.unassign),
                 onTap: () async {
                   Navigator.pop(sheetContext);
                   await shiftsManager.unassignShift(shift.id);
@@ -480,8 +488,8 @@ class _ShiftChip extends StatelessWidget {
             ListTile(
               leading:
                   const Icon(Icons.delete_outline, color: AppColors.danger),
-              title: const Text('Delete shift',
-                  style: TextStyle(color: AppColors.danger)),
+              title: Text(l10n.deleteShift,
+                  style: const TextStyle(color: AppColors.danger)),
               onTap: () async {
                 Navigator.pop(sheetContext);
                 await shiftsManager.deleteShift(shift.id);

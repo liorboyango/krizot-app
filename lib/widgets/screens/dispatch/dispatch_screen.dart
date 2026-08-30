@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app_config/l10n/gen/app_localizations.dart';
 import '../../../app_config/service_locator.dart';
 import '../../../entities/emergency_event.dart';
 import '../../../entities/event_type.dart';
@@ -20,6 +21,7 @@ class DispatchScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final dispatchManager = locator<DispatchManager>();
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -30,9 +32,9 @@ class DispatchScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
             child: Row(
               children: [
-                const Text(
-                  'Emergency Dispatch',
-                  style: TextStyle(
+                Text(
+                  l10n.emergencyDispatchTitle,
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
@@ -43,7 +45,7 @@ class DispatchScreen extends StatelessWidget {
                   onPressed: () => context.go(
                       '${DispatchScreen.ROUTE_PATH}/${EventTypesScreen.ROUTE_SUB_PATH}'),
                   icon: const Icon(Icons.tune, size: 18),
-                  label: const Text('Event Types'),
+                  label: Text(l10n.eventTypesTitle),
                 ),
               ],
             ),
@@ -52,9 +54,9 @@ class DispatchScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
               children: [
-                const Text(
-                  'TRIGGER CALL-OUT',
-                  style: TextStyle(
+                Text(
+                  l10n.triggerCallout,
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.1,
@@ -70,12 +72,10 @@ class DispatchScreen extends StatelessWidget {
                         .where((type) => type.active)
                         .toList();
                     if (types.isEmpty) {
-                      return const Card(
+                      return Card(
                         child: Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Text(
-                              'No event types configured yet — define '
-                              'scenarios under Event Types.'),
+                          padding: const EdgeInsets.all(20),
+                          child: Text(l10n.noEventTypesConfigured),
                         ),
                       );
                     }
@@ -90,9 +90,9 @@ class DispatchScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 28),
-                const Text(
-                  'ACTIVE EVENTS',
-                  style: TextStyle(
+                Text(
+                  l10n.activeEvents,
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.1,
@@ -106,10 +106,10 @@ class DispatchScreen extends StatelessWidget {
                   builder: (context, snapshot) {
                     final events = snapshot.data ?? const <EmergencyEvent>[];
                     if (events.isEmpty) {
-                      return const Card(
+                      return Card(
                         child: Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Text('No active emergencies.'),
+                          padding: const EdgeInsets.all(20),
+                          child: Text(l10n.noActiveEmergencies),
                         ),
                       );
                     }
@@ -143,22 +143,22 @@ class _TriggerButtonState extends State<_TriggerButton> {
   bool isBusy = false;
 
   Future<void> onPressed() async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       routeSettings: const RouteSettings(name: 'trigger_emergency_dialog'),
       builder: (dialogContext) => AlertDialog(
-        title: Text('Trigger "${widget.eventType.name}"?'),
-        content: const Text(
-            'All matching responders will be alerted immediately.'),
+        title: Text(l10n.triggerEventConfirmTitle(widget.eventType.name)),
+        content: Text(l10n.triggerEventConfirmBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('TRIGGER'),
+            child: Text(l10n.triggerAction),
           ),
         ],
       ),
@@ -170,15 +170,12 @@ class _TriggerButtonState extends State<_TriggerButton> {
     if (!mounted) return;
     setState(() => isBusy = false);
     if (result == null) {
-      SnackBarUtil.showSnackBar(
-          context,
-          'Failed to trigger — check responders hold the required '
-          'certifications.',
-          Variant.ERROR);
+      SnackBarUtil.showSnackBar(context, l10n.failedToTrigger, Variant.ERROR);
     } else {
       SnackBarUtil.showSnackBar(
           context,
-          'Alerted ${result['alertedCount']} responder(s).',
+          l10n.alertedResponders(
+              (result['alertedCount'] as num?)?.toInt() ?? 0),
           Variant.SUCCESS);
     }
   }
@@ -261,7 +258,8 @@ class _ActiveEventCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${ackedUids.length}/${event.alertedUserIds.length} acknowledged',
+                      AppLocalizations.of(context)!.acknowledgedTally(
+                          ackedUids.length, event.alertedUserIds.length),
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
@@ -274,7 +272,7 @@ class _ActiveEventCard extends StatelessWidget {
                         if (uid == null) return;
                         await dispatchManager.resolveEvent(event.id, uid);
                       },
-                      child: const Text('Resolve'),
+                      child: Text(AppLocalizations.of(context)!.resolve),
                     ),
                   ],
                 ),

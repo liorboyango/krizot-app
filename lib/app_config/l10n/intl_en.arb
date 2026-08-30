@@ -1,0 +1,335 @@
+{
+  "appName": "Krizot",
+  "appTagline": "Shift scheduling & dispatch",
+
+  "cancel": "Cancel",
+  "close": "Close",
+  "save": "Save",
+  "create": "Create",
+  "delete": "Delete",
+  "edit": "Edit",
+  "saving": "Saving…",
+  "signOut": "Sign out",
+
+  "signInFailed": "Sign-in failed. Please try again.",
+  "signingIn": "Signing in…",
+  "continueWithGoogle": "Continue with Google",
+
+  "navScheduler": "Scheduler",
+  "navStations": "Stations",
+  "navStaff": "Staff",
+  "navDispatch": "Dispatch",
+
+  "schedulerTitle": "Scheduler",
+  "noActiveStations": "No active stations — create one on the Stations screen.",
+  "previousWeek": "Previous week",
+  "nextWeek": "Next week",
+  "today": "Today",
+  "autoFillWhichDay": "Auto-fill which day?",
+  "autoFill": "Auto-Fill",
+  "stationColumn": "Station",
+  "twentyFourSeven": "24/7",
+  "openShiftShort": "Open",
+  "assignmentFailed": "Assignment failed.",
+  "openShift": "Open shift",
+  "assignedTo": "Assigned to {name}",
+  "@assignedTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "acknowledgedCheck": "acknowledged ✓",
+  "notAcknowledgedYet": "not acknowledged yet",
+  "findReplacementAi": "Find replacement (AI)",
+  "reassign": "Reassign",
+  "assign": "Assign",
+  "editTimes": "Edit times",
+  "unassign": "Unassign",
+  "deleteShift": "Delete shift",
+
+  "aiAutoFillTitle": "AI Auto-Fill",
+  "autoFillExplainer": "Fill all open shifts on {date} using staff availability and certifications.",
+  "@autoFillExplainer": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "aiInstructionsLabel": "Instructions for the AI (optional)",
+  "aiInstructionsHint": "e.g. Spread shifts evenly; avoid night shifts for new staff",
+  "planningSchedule": "Planning schedule…",
+  "autoFillFailed": "Auto-fill failed — check that the Cloud Function is deployed and an LLM API key is configured.",
+  "filledShifts": "{count, plural, =1{Filled 1 shift} other{Filled {count} shifts}}",
+  "@filledShifts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "leftOpen": ", {count} left open",
+  "@leftOpen": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "runAutoFill": "Run Auto-Fill",
+
+  "findReplacementTitle": "Find replacement — {station}",
+  "@findReplacementTitle": {
+    "placeholders": {
+      "station": {
+        "type": "String"
+      }
+    }
+  },
+  "assignTitle": "Assign — {station}",
+  "@assignTitle": {
+    "placeholders": {
+      "station": {
+        "type": "String"
+      }
+    }
+  },
+  "thinking": "Thinking…",
+  "aiSuggest": "AI suggest",
+  "eligibleStaffOnly": "Only certified, available, conflict-free staff are listed.",
+  "aiNoReplacement": "AI found no eligible replacement.",
+  "nobodyEligible": "Nobody is eligible for this shift — check certifications, availability and overlapping assignments.",
+  "suggestionServiceUnavailable": "Suggestion service unavailable.",
+
+  "editShiftTitle": "Edit shift — {station}",
+  "@editShiftTitle": {
+    "placeholders": {
+      "station": {
+        "type": "String"
+      }
+    }
+  },
+  "newShiftTitle": "New shift — {station}",
+  "@newShiftTitle": {
+    "placeholders": {
+      "station": {
+        "type": "String"
+      }
+    }
+  },
+  "shiftStart": "Shift start",
+  "shiftEnd": "Shift end",
+  "startAt": "Start {time}",
+  "@startAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "endAt": "End {time}",
+  "@endAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToSaveShift": "Failed to save shift.",
+
+  "staffTitle": "Staff",
+  "dragToAssign": "Drag onto a shift to assign",
+  "certificationCount": "{count, plural, =1{1 certification} other{{count} certifications}}",
+  "@certificationCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "statusAvailable": "Available",
+  "statusSick": "Sick",
+  "statusUnavailable": "Unavailable",
+
+  "roleAdmin": "Admin",
+  "roleManager": "Manager",
+  "roleDispatcher": "Dispatcher",
+  "roleEmployee": "Employee",
+
+  "certificationsTitle": "Certifications",
+  "noStaffYet": "No staff yet — users appear here after their first sign-in.",
+  "noCertifications": "No certifications",
+  "editStaffMember": "Edit staff member",
+  "availabilityLabel": "Availability",
+  "noCertificationsInCatalog": "No certifications in the catalog yet.",
+  "roleLabel": "Role",
+  "failedToSaveChanges": "Failed to save changes.",
+  "newCertification": "New certification",
+  "failedToAddCertification": "Failed to add certification.",
+  "certCatalogEmptyExample": "Nothing here yet — e.g. \"Armed Guard\", \"Medic\", \"Type C Responder\".",
+
+  "stationsTitle": "Stations",
+  "newStation": "New Station",
+  "searchStations": "Search stations…",
+  "noStations": "No stations",
+  "createFirstStation": "Create your first station to start scheduling.",
+  "noStationsMatch": "No stations match \"{query}\".",
+  "@noStationsMatch": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "manning247": "24/7 manning",
+  "onDemandWindows": "On-demand: {windows}",
+  "@onDemandWindows": {
+    "placeholders": {
+      "windows": {
+        "type": "String"
+      }
+    }
+  },
+  "requiresCerts": "Requires: {certs}",
+  "@requiresCerts": {
+    "placeholders": {
+      "certs": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteStationTitle": "Delete station?",
+  "deleteStationBody": "\"{name}\" and its configuration will be removed. Existing shifts are not deleted.",
+  "@deleteStationBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToDeleteStation": "Failed to delete station.",
+  "onDemandNeedsWindow": "On-demand stations need at least one active window.",
+  "failedToSaveStation": "Failed to save station.",
+  "windowStart": "Window start",
+  "windowEnd": "Window end",
+  "editStation": "Edit Station",
+  "nameLabel": "Name",
+  "nameRequired": "Name is required",
+  "locationLabel": "Location",
+  "locationRequired": "Location is required",
+  "defaultShiftLength": "Default shift length (minutes)",
+  "positiveMinutes": "Enter a positive number of minutes",
+  "stationActive": "Active",
+  "stationClosed": "Closed",
+  "manningLabel": "Manning",
+  "onDemand": "On-demand",
+  "addWindow": "Add window",
+  "requiredCertificationsLabel": "Required certifications",
+  "noCertsDefinedAddOnStaff": "No certifications defined yet — add them on the Staff screen.",
+  "notesLabel": "Notes",
+
+  "chipCovered": "Covered",
+  "chipOpen": "Open",
+  "chipCritical": "Critical",
+
+  "emergencyDispatchTitle": "Emergency Dispatch",
+  "eventTypesTitle": "Event Types",
+  "triggerCallout": "TRIGGER CALL-OUT",
+  "noEventTypesConfigured": "No event types configured yet — define scenarios under Event Types.",
+  "activeEvents": "ACTIVE EVENTS",
+  "noActiveEmergencies": "No active emergencies.",
+  "triggerEventConfirmTitle": "Trigger \"{name}\"?",
+  "@triggerEventConfirmTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "triggerEventConfirmBody": "All matching responders will be alerted immediately.",
+  "triggerAction": "TRIGGER",
+  "failedToTrigger": "Failed to trigger — check responders hold the required certifications.",
+  "alertedResponders": "{count, plural, =1{Alerted 1 responder.} other{Alerted {count} responders.}}",
+  "@alertedResponders": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "acknowledgedTally": "{acked}/{total} acknowledged",
+  "@acknowledgedTally": {
+    "placeholders": {
+      "acked": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "resolve": "Resolve",
+
+  "newEventType": "New Event Type",
+  "noScenariosYet": "No scenarios yet — e.g. \"Event Type C\" alerting all Type C Responders.",
+  "inactiveTag": "(inactive)",
+  "respondersLabel": "Responders: {certs}",
+  "@respondersLabel": {
+    "placeholders": {
+      "certs": {
+        "type": "String"
+      }
+    }
+  },
+  "stationsLabel": "Stations: {stations}",
+  "@stationsLabel": {
+    "placeholders": {
+      "stations": {
+        "type": "String"
+      }
+    }
+  },
+  "pickOneResponderCert": "Pick at least one responder certification.",
+  "failedToSaveEventType": "Failed to save event type.",
+  "editEventType": "Edit Event Type",
+  "eventTypeNameLabel": "Name (e.g. Event Type C)",
+  "descriptionLabel": "Description",
+  "priorityLabel": "Priority",
+  "priorityHigh": "High",
+  "priorityCritical": "Critical",
+  "responderCertsAnyLabel": "Responder certifications (holder of ANY)",
+  "noCertsDefinedStaffFirst": "No certifications defined — add them on the Staff screen first.",
+  "stationsInvolved": "Stations involved",
+  "eventTypeActive": "Active",
+  "inactiveHiddenFromBoard": "Inactive scenarios are hidden from the dispatch board",
+
+  "hiUser": "Hi, {name}",
+  "@hiUser": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "currentAssignment": "CURRENT ASSIGNMENT",
+  "upcomingAssignment": "UPCOMING ASSIGNMENT",
+  "noUpcomingAssignments": "No upcoming assignments.",
+  "mySchedule": "My schedule",
+  "emergencyBanner": "EMERGENCY: {name}",
+  "@emergencyBanner": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ackStandBy": "Acknowledged — stand by.",
+  "youAreNeeded": "You are needed. Acknowledge now.",
+  "failedToAcknowledge": "Failed to acknowledge.",
+  "acknowledgeAction": "ACKNOWLEDGE",
+  "acknowledge": "Acknowledge",
+  "failedToAcknowledgeRetry": "Failed to acknowledge — try again."
+}

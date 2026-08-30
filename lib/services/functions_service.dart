@@ -25,9 +25,14 @@ class FunctionsService {
   }
 
   /// Auto-fill open shifts for a day. [dayKey] is 'YYYY-MM-DD'.
+  /// [instructions] is optional free-text manager guidance for the LLM.
   /// Returns `{filled: int, unfilled: [shiftId], notes: string}` or null.
-  Future<Map<String, dynamic>?> autoFillSchedule(String dayKey) =>
-      _call(Constants.FN_AUTO_FILL_SCHEDULE, {'date': dayKey});
+  Future<Map<String, dynamic>?> autoFillSchedule(String dayKey,
+          {String? instructions}) =>
+      _call(Constants.FN_AUTO_FILL_SCHEDULE, {
+        'date': dayKey,
+        'instructions': ?instructions,
+      });
 
   /// Ranked replacement candidates for a shift whose assignee dropped out.
   /// Returns `{candidates: [{userId, displayName, rank, reason}]}` or null.

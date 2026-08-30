@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../app_config/l10n/gen/app_localizations.dart';
 import '../../../app_config/service_locator.dart';
 import '../../../entities/certification.dart';
 import '../../../entities/station.dart';
@@ -28,6 +29,7 @@ class _StationsScreenState extends State<StationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.background,
       floatingActionButton: FloatingActionButton.extended(
@@ -35,7 +37,7 @@ class _StationsScreenState extends State<StationsScreen> {
         backgroundColor: AppColors.accent,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: const Text('New Station'),
+        label: Text(l10n.newStation),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,9 +46,9 @@ class _StationsScreenState extends State<StationsScreen> {
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
             child: Row(
               children: [
-                const Text(
-                  'Stations',
-                  style: TextStyle(
+                Text(
+                  l10n.stationsTitle,
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
@@ -56,11 +58,11 @@ class _StationsScreenState extends State<StationsScreen> {
                 SizedBox(
                   width: 280,
                   child: TextField(
-                    decoration: const InputDecoration(
-                      hintText: 'Search stations…',
-                      prefixIcon: Icon(Icons.search, size: 20),
+                    decoration: InputDecoration(
+                      hintText: l10n.searchStations,
+                      prefixIcon: const Icon(Icons.search, size: 20),
                       isDense: true,
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                     onChanged: (value) =>
                         setState(() => searchQuery = value.toLowerCase()),
@@ -86,11 +88,11 @@ class _StationsScreenState extends State<StationsScreen> {
                 if (stations.isEmpty) {
                   return EmptyState(
                     icon: Icons.location_on_outlined,
-                    title: 'No stations',
+                    title: l10n.noStations,
                     description: searchQuery.isEmpty
-                        ? 'Create your first station to start scheduling.'
-                        : 'No stations match "$searchQuery".',
-                    actionLabel: searchQuery.isEmpty ? 'New Station' : null,
+                        ? l10n.createFirstStation
+                        : l10n.noStationsMatch(searchQuery),
+                    actionLabel: searchQuery.isEmpty ? l10n.newStation : null,
                     onAction: searchQuery.isEmpty ? onAddPressed : null,
                   );
                 }
@@ -117,6 +119,7 @@ class _StationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final stationsManager = locator<StationsManager>();
     final certNames = station.requiredCertifications
         .map((id) => stationsManager.certificationById(id)?.name ?? id)
@@ -143,7 +146,7 @@ class _StationTile extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(width: 8),
-            StatusChip.fromStationStatus(station.status),
+            StatusChip.fromStationStatus(context, station.status),
           ],
         ),
         subtitle: Padding(
@@ -152,9 +155,10 @@ class _StationTile extends StatelessWidget {
             [
               station.location,
               station.isAroundTheClock
-                  ? '24/7 manning'
-                  : 'On-demand: ${station.activeWindows.join(', ')}',
-              if (certNames.isNotEmpty) 'Requires: ${certNames.join(', ')}',
+                  ? l10n.manning247
+                  : l10n.onDemandWindows(station.activeWindows.join(', ')),
+              if (certNames.isNotEmpty)
+                l10n.requiresCerts(certNames.join(', ')),
             ].join('  ·  '),
             style: const TextStyle(color: AppColors.textSecondary),
           ),
@@ -163,13 +167,13 @@ class _StationTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              tooltip: 'Edit',
+              tooltip: l10n.edit,
               icon: const Icon(Icons.edit_outlined, size: 20),
               onPressed: () =>
                   _StationEditorDialog.show(context, station: station),
             ),
             IconButton(
-              tooltip: 'Delete',
+              tooltip: l10n.delete,
               icon: const Icon(Icons.delete_outline,
                   size: 20, color: AppColors.danger),
               onPressed: () => _confirmDelete(context),
@@ -181,23 +185,22 @@ class _StationTile extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       routeSettings: const RouteSettings(name: 'delete_station_dialog'),
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete station?'),
-        content: Text(
-            '"${station.name}" and its configuration will be removed. '
-            'Existing shifts are not deleted.'),
+        title: Text(l10n.deleteStationTitle),
+        content: Text(l10n.deleteStationBody(station.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -206,7 +209,7 @@ class _StationTile extends StatelessWidget {
     final success = await locator<StationsManager>().deleteStation(station.id);
     if (!success && context.mounted) {
       SnackBarUtil.showSnackBar(
-          context, 'Failed to delete station.', Variant.ERROR);
+          context, l10n.failedToDeleteStation, Variant.ERROR);
     }
   }
 }
@@ -262,8 +265,10 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
   Future<void> onSavePressed() async {
     if (!formKey.currentState!.validate()) return;
     if (manningType == ManningType.onDemand && windows.isEmpty) {
-      SnackBarUtil.showSnackBar(context,
-          'On-demand stations need at least one active window.', Variant.WARNING);
+      SnackBarUtil.showSnackBar(
+          context,
+          AppLocalizations.of(context)!.onDemandNeedsWindow,
+          Variant.WARNING);
       return;
     }
     setState(() => isBusy = true);
@@ -292,22 +297,23 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
     if (success) {
       Navigator.pop(context);
     } else {
-      SnackBarUtil.showSnackBar(
-          context, 'Failed to save station.', Variant.ERROR);
+      SnackBarUtil.showSnackBar(context,
+          AppLocalizations.of(context)!.failedToSaveStation, Variant.ERROR);
     }
   }
 
   Future<void> onAddWindowPressed() async {
+    final l10n = AppLocalizations.of(context)!;
     final start = await showTimePicker(
       context: context,
       initialTime: const TimeOfDay(hour: 8, minute: 0),
-      helpText: 'Window start',
+      helpText: l10n.windowStart,
     );
     if (start == null || !mounted) return;
     final end = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: (start.hour + 2) % 24, minute: start.minute),
-      helpText: 'Window end',
+      helpText: l10n.windowEnd,
     );
     if (end == null || !mounted) return;
     setState(() => windows.add(TimeWindow(
@@ -321,9 +327,10 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final stationsManager = locator<StationsManager>();
     return AlertDialog(
-      title: Text(isEditing ? 'Edit Station' : 'New Station'),
+      title: Text(isEditing ? l10n.editStation : l10n.newStation),
       content: SizedBox(
         width: 440,
         child: Form(
@@ -335,57 +342,59 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
               children: [
                 TextFormField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Name'),
+                  decoration: InputDecoration(labelText: l10n.nameLabel),
                   validator: (value) => (value == null || value.trim().isEmpty)
-                      ? 'Name is required'
+                      ? l10n.nameRequired
                       : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: locationController,
-                  decoration: const InputDecoration(labelText: 'Location'),
+                  decoration: InputDecoration(labelText: l10n.locationLabel),
                   validator: (value) => (value == null || value.trim().isEmpty)
-                      ? 'Location is required'
+                      ? l10n.locationRequired
                       : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: shiftMinutesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Default shift length (minutes)',
+                  decoration: InputDecoration(
+                    labelText: l10n.defaultShiftLength,
                   ),
                   keyboardType: TextInputType.number,
                   validator: (value) {
                     final minutes = int.tryParse(value?.trim() ?? '');
                     return (minutes == null || minutes <= 0)
-                        ? 'Enter a positive number of minutes'
+                        ? l10n.positiveMinutes
                         : null;
                   },
                 ),
                 const SizedBox(height: 16),
                 SegmentedButton<StationStatus>(
-                  segments: const [
+                  segments: [
                     ButtonSegment(
-                        value: StationStatus.active, label: Text('Active')),
+                        value: StationStatus.active,
+                        label: Text(l10n.stationActive)),
                     ButtonSegment(
-                        value: StationStatus.closed, label: Text('Closed')),
+                        value: StationStatus.closed,
+                        label: Text(l10n.stationClosed)),
                   ],
                   selected: {status},
                   onSelectionChanged: (selection) =>
                       setState(() => status = selection.first),
                 ),
                 const SizedBox(height: 16),
-                const Text('Manning',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
+                Text(l10n.manningLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 SegmentedButton<ManningType>(
-                  segments: const [
+                  segments: [
                     ButtonSegment(
                         value: ManningType.aroundTheClock,
-                        label: Text('24/7')),
+                        label: Text(l10n.twentyFourSeven)),
                     ButtonSegment(
                         value: ManningType.onDemand,
-                        label: Text('On-demand')),
+                        label: Text(l10n.onDemand)),
                   ],
                   selected: {manningType},
                   onSelectionChanged: (selection) =>
@@ -404,15 +413,15 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
                         ),
                       ActionChip(
                         avatar: const Icon(Icons.add, size: 18),
-                        label: const Text('Add window'),
+                        label: Text(l10n.addWindow),
                         onPressed: onAddWindowPressed,
                       ),
                     ],
                   ),
                 ],
                 const SizedBox(height: 16),
-                const Text('Required certifications',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
+                Text(l10n.requiredCertificationsLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 StreamBuilder<List<Certification>>(
                   initialData: stationsManager.certifications,
@@ -420,9 +429,9 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
                   builder: (context, snapshot) {
                     final certifications = snapshot.data ?? const [];
                     if (certifications.isEmpty) {
-                      return const Text(
-                        'No certifications defined yet — add them on the Staff screen.',
-                        style: TextStyle(
+                      return Text(
+                        l10n.noCertsDefinedAddOnStaff,
+                        style: const TextStyle(
                             color: AppColors.textSecondary, fontSize: 13),
                       );
                     }
@@ -449,7 +458,7 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: notesController,
-                  decoration: const InputDecoration(labelText: 'Notes'),
+                  decoration: InputDecoration(labelText: l10n.notesLabel),
                   maxLines: 2,
                 ),
               ],
@@ -460,11 +469,12 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
       actions: [
         TextButton(
           onPressed: isBusy ? null : () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: isBusy ? null : onSavePressed,
-          child: Text(isBusy ? 'Saving…' : (isEditing ? 'Save' : 'Create')),
+          child: Text(
+              isBusy ? l10n.saving : (isEditing ? l10n.save : l10n.create)),
         ),
       ],
     );

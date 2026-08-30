@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app_config/l10n/gen/app_localizations.dart';
 import '../../app_config/service_locator.dart';
 import '../../managers/user_manager.dart';
 import '../../utils/app_colors.dart';
@@ -26,7 +27,7 @@ class _SignInScreenState extends State<SignInScreen> {
     if (!success) {
       SnackBarUtil.showSnackBar(
         context,
-        'Sign-in failed. Please try again.',
+        AppLocalizations.of(context)!.signInFailed,
         Variant.ERROR,
       );
     }
@@ -34,6 +35,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -58,18 +60,18 @@ class _SignInScreenState extends State<SignInScreen> {
                   const Icon(Icons.calendar_month,
                       size: 48, color: AppColors.primary),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Krizot',
-                    style: TextStyle(
+                  Text(
+                    l10n.appName,
+                    style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Shift scheduling & dispatch',
-                    style: TextStyle(
+                  Text(
+                    l10n.appTagline,
+                    style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.textSecondary,
                     ),
@@ -95,7 +97,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             )
                           : const Icon(Icons.login),
                       label: Text(
-                          isBusy ? 'Signing in…' : 'Continue with Google'),
+                          isBusy ? l10n.signingIn : l10n.continueWithGoogle),
                     ),
                   ),
                 ],

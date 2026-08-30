@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../app_config/l10n/gen/app_localizations.dart';
 import '../../../app_config/service_locator.dart';
 import '../../../entities/app_user.dart';
 import '../../../entities/certification.dart';
@@ -9,6 +10,7 @@ import '../../../managers/user_manager.dart';
 import '../../../services/functions_service.dart';
 import '../../../services/user_service.dart';
 import '../../../utils/app_colors.dart';
+import '../../../utils/l10n_util.dart';
 import '../../../utils/snackbar_util.dart';
 
 /// Staff management: certification tagging, availability status, roles
@@ -21,6 +23,7 @@ class UsersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final shiftsManager = locator<ShiftsManager>();
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -31,9 +34,9 @@ class UsersScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
             child: Row(
               children: [
-                const Text(
-                  'Staff',
-                  style: TextStyle(
+                Text(
+                  l10n.staffTitle,
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
@@ -43,7 +46,7 @@ class UsersScreen extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: () => _CertificationCatalogDialog.show(context),
                   icon: const Icon(Icons.workspace_premium_outlined, size: 18),
-                  label: const Text('Certifications'),
+                  label: Text(l10n.certificationsTitle),
                 ),
               ],
             ),
@@ -58,10 +61,7 @@ class UsersScreen extends StatelessWidget {
                 }
                 final users = snapshot.data!;
                 if (users.isEmpty) {
-                  return const Center(
-                    child: Text('No staff yet — users appear here after '
-                        'their first sign-in.'),
-                  );
+                  return Center(child: Text(l10n.noStaffYet));
                 }
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
@@ -92,6 +92,7 @@ class _UserTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final stationsManager = locator<StationsManager>();
     final certNames = user.certifications
         .map((id) => stationsManager.certificationById(id)?.name ?? id)
@@ -139,7 +140,7 @@ class _UserTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                user.role.name,
+                L10nUtil.roleLabel(l10n, user.role),
                 style: const TextStyle(fontSize: 11, color: AppColors.accent),
               ),
             ),
@@ -148,13 +149,16 @@ class _UserTile extends StatelessWidget {
         subtitle: Text(
           [
             user.email,
-            if (certNames.isNotEmpty) certNames.join(', ') else 'No certifications',
+            if (certNames.isNotEmpty)
+              certNames.join(', ')
+            else
+              l10n.noCertifications,
           ].join('  ·  '),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
         trailing: IconButton(
-          tooltip: 'Edit staff member',
+          tooltip: l10n.editStaffMember,
           icon: const Icon(Icons.edit_outlined, size: 20),
           onPressed: () => _UserEditorDialog.show(context, user),
         ),
@@ -202,13 +206,14 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
     if (success) {
       Navigator.pop(context);
     } else {
-      SnackBarUtil.showSnackBar(
-          context, 'Failed to save changes.', Variant.ERROR);
+      SnackBarUtil.showSnackBar(context,
+          AppLocalizations.of(context)!.failedToSaveChanges, Variant.ERROR);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final stationsManager = locator<StationsManager>();
     final isAdmin = locator<UserManager>().role == UserRole.admin;
     return AlertDialog(
@@ -220,25 +225,27 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Availability',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+              Text(l10n.availabilityLabel,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               SegmentedButton<UserStatus>(
-                segments: const [
+                segments: [
                   ButtonSegment(
-                      value: UserStatus.available, label: Text('Available')),
-                  ButtonSegment(value: UserStatus.sick, label: Text('Sick')),
+                      value: UserStatus.available,
+                      label: Text(l10n.statusAvailable)),
+                  ButtonSegment(
+                      value: UserStatus.sick, label: Text(l10n.statusSick)),
                   ButtonSegment(
                       value: UserStatus.unavailable,
-                      label: Text('Unavailable')),
+                      label: Text(l10n.statusUnavailable)),
                 ],
                 selected: {status},
                 onSelectionChanged: (selection) =>
                     setState(() => status = selection.first),
               ),
               const SizedBox(height: 16),
-              const Text('Certifications',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+              Text(l10n.certificationsTitle,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               StreamBuilder<List<Certification>>(
                 initialData: stationsManager.certifications,
@@ -246,9 +253,9 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                 builder: (context, snapshot) {
                   final certifications = snapshot.data ?? const [];
                   if (certifications.isEmpty) {
-                    return const Text(
-                      'No certifications in the catalog yet.',
-                      style: TextStyle(
+                    return Text(
+                      l10n.noCertificationsInCatalog,
+                      style: const TextStyle(
                           color: AppColors.textSecondary, fontSize: 13),
                     );
                   }
@@ -274,15 +281,16 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
               ),
               if (isAdmin) ...[
                 const SizedBox(height: 16),
-                const Text('Role',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
+                Text(l10n.roleLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<UserRole>(
                   initialValue: role,
                   items: [
                     for (final value in UserRole.values)
                       DropdownMenuItem(
-                          value: value, child: Text(value.name)),
+                          value: value,
+                          child: Text(L10nUtil.roleLabel(l10n, value))),
                   ],
                   onChanged: (value) =>
                       setState(() => role = value ?? role),
@@ -295,11 +303,11 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
       actions: [
         TextButton(
           onPressed: isBusy ? null : () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: isBusy ? null : onSavePressed,
-          child: Text(isBusy ? 'Saving…' : 'Save'),
+          child: Text(isBusy ? l10n.saving : l10n.save),
         ),
       ],
     );
@@ -340,7 +348,9 @@ class _CertificationCatalogDialogState
     if (!mounted) return;
     if (id == null) {
       SnackBarUtil.showSnackBar(
-          context, 'Failed to add certification.', Variant.ERROR);
+          context,
+          AppLocalizations.of(context)!.failedToAddCertification,
+          Variant.ERROR);
     } else {
       nameController.clear();
     }
@@ -348,9 +358,10 @@ class _CertificationCatalogDialogState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final stationsManager = locator<StationsManager>();
     return AlertDialog(
-      title: const Text('Certifications'),
+      title: Text(l10n.certificationsTitle),
       content: SizedBox(
         width: 400,
         child: Column(
@@ -361,8 +372,8 @@ class _CertificationCatalogDialogState
                 Expanded(
                   child: TextField(
                     controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'New certification',
+                    decoration: InputDecoration(
+                      labelText: l10n.newCertification,
                       isDense: true,
                     ),
                     onSubmitted: (_) => onAddPressed(),
@@ -383,10 +394,9 @@ class _CertificationCatalogDialogState
                 builder: (context, snapshot) {
                   final certifications = snapshot.data ?? const [];
                   if (certifications.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text('Nothing here yet — e.g. "Armed Guard", '
-                          '"Medic", "Type C Responder".'),
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(l10n.certCatalogEmptyExample),
                     );
                   }
                   return ListView(
@@ -414,7 +424,7 @@ class _CertificationCatalogDialogState
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
+          child: Text(l10n.close),
         ),
       ],
     );

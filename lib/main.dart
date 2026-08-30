@@ -11,6 +11,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 
 import 'app_config/constants.dart';
@@ -29,6 +31,10 @@ const bool _useEmulator = bool.fromEnvironment('USE_FIREBASE_EMULATOR');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Hebrew-first UI: intl date/day names must match the app locale.
+  await initializeDateFormatting('he');
+  Intl.defaultLocale = 'he';
 
   final firebaseApp = await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,

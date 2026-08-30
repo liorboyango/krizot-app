@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app_config/l10n/gen/app_localizations.dart';
 import '../../../app_config/service_locator.dart';
 import '../../../entities/app_user.dart';
 import '../../../managers/user_manager.dart';
@@ -19,35 +20,42 @@ class WebShell extends StatelessWidget {
 
   const WebShell({super.key, required this.child});
 
-  static const _destinations = [
-    (
-      path: SchedulerScreen.ROUTE_PATH,
-      label: 'Scheduler',
-      icon: Icons.calendar_month,
-      managerOnly: true,
-    ),
-    (
-      path: StationsScreen.ROUTE_PATH,
-      label: 'Stations',
-      icon: Icons.location_on_outlined,
-      managerOnly: true,
-    ),
-    (
-      path: UsersScreen.ROUTE_PATH,
-      label: 'Staff',
-      icon: Icons.people_outline,
-      managerOnly: true,
-    ),
-    (
-      path: DispatchScreen.ROUTE_PATH,
-      label: 'Dispatch',
-      icon: Icons.campaign_outlined,
-      managerOnly: false,
-    ),
-  ];
+  static List<
+      ({
+        String path,
+        String label,
+        IconData icon,
+        bool managerOnly,
+      })> _destinations(AppLocalizations l10n) => [
+        (
+          path: SchedulerScreen.ROUTE_PATH,
+          label: l10n.navScheduler,
+          icon: Icons.calendar_month,
+          managerOnly: true,
+        ),
+        (
+          path: StationsScreen.ROUTE_PATH,
+          label: l10n.navStations,
+          icon: Icons.location_on_outlined,
+          managerOnly: true,
+        ),
+        (
+          path: UsersScreen.ROUTE_PATH,
+          label: l10n.navStaff,
+          icon: Icons.people_outline,
+          managerOnly: true,
+        ),
+        (
+          path: DispatchScreen.ROUTE_PATH,
+          label: l10n.navDispatch,
+          icon: Icons.campaign_outlined,
+          managerOnly: false,
+        ),
+      ];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final userManager = locator<UserManager>();
     return StreamBuilder<AppUser?>(
       initialData: userManager.user,
@@ -55,7 +63,7 @@ class WebShell extends StatelessWidget {
       builder: (context, snapshot) {
         final user = snapshot.data;
         final role = user?.role ?? UserRole.employee;
-        final visible = _destinations
+        final visible = _destinations(l10n)
             .where((d) => role.canManage || (!d.managerOnly && role.canDispatch))
             .toList();
         final location =
@@ -91,7 +99,7 @@ class WebShell extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: IconButton(
-                          tooltip: 'Sign out',
+                          tooltip: l10n.signOut,
                           icon: const Icon(Icons.logout, color: Colors.white70),
                           onPressed: () => userManager.signOut(),
                         ),
