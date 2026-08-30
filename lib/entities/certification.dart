@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'cert_requirement.dart';
+import 'org_scope.dart';
 
 /// A skill/qualification from the catalog. Stations require certifications,
 /// users hold them, and emergency event types target holders of them
@@ -18,6 +19,12 @@ class Certification {
   /// how many holders of which certifications.
   final List<CertRequirement> simulationStaff;
 
+  /// Org scope — only users matching every non-null layer may hold the
+  /// certification. All-null = available to everyone.
+  final Site? site;
+  final Department? department;
+  final JobRole? jobRole;
+
   /// Hex color (e.g. '#0D7CFF') for chips in the UI.
   final String? color;
   final DateTime? createdAt;
@@ -28,6 +35,9 @@ class Certification {
     this.description,
     this.level = 0,
     this.simulationStaff = const [],
+    this.site,
+    this.department,
+    this.jobRole,
     this.color,
     this.createdAt,
   });
@@ -40,6 +50,9 @@ class Certification {
         level: (map['level'] as num?)?.toInt() ?? 0,
         simulationStaff:
             CertRequirement.listFromMaps(map['simulationStaff'] as List?),
+        site: Site.fromString(map['site'] as String?),
+        department: Department.fromString(map['department'] as String?),
+        jobRole: JobRole.fromString(map['jobRole'] as String?),
         color: map['color'] as String?,
         createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
       );
@@ -52,6 +65,9 @@ class Certification {
         if (description != null) 'description': description,
         'level': level,
         'simulationStaff': CertRequirement.listToMaps(simulationStaff),
+        if (site != null) 'site': site!.wireName,
+        if (department != null) 'department': department!.name,
+        if (jobRole != null) 'jobRole': jobRole!.name,
         if (color != null) 'color': color,
         if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),
       };
@@ -67,6 +83,9 @@ class Certification {
         description: description,
         level: level ?? this.level,
         simulationStaff: simulationStaff ?? this.simulationStaff,
+        site: site,
+        department: department,
+        jobRole: jobRole,
         color: color,
         createdAt: createdAt,
       );

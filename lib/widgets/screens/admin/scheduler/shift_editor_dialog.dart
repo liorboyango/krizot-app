@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app_config/constants.dart';
 import '../../../../app_config/l10n/gen/app_localizations.dart';
 import '../../../../app_config/service_locator.dart';
 import '../../../../entities/shift.dart';
@@ -9,9 +10,9 @@ import '../../../../utils/app_colors.dart';
 import '../../../../utils/snackbar_util.dart';
 import '../../../../utils/time_util.dart';
 
-/// Create or edit a shift's time block. Shift length defaults to the
-/// station's `defaultShiftMinutes` but is fully editable (DESIGN.md:
-/// "default 2-hour blocks, fully editable").
+/// Create or edit a shift's time block. Shift length defaults to 2 hours but
+/// is fully editable per occurrence (DESIGN.md: "default 2-hour blocks,
+/// fully editable").
 class ShiftEditorDialog extends StatefulWidget {
   final Station station;
   final DateTime day;
@@ -62,7 +63,7 @@ class _ShiftEditorDialogState extends State<ShiftEditorDialog> {
     } else {
       // Default: caller-provided start (tapped hour), else first active
       // window start for on-demand stations, 08:00 otherwise — plus the
-      // station's default shift length.
+      // default shift length.
       start = widget.initialStart ??
           (widget.station.isAroundTheClock ||
                   widget.station.activeWindows.isEmpty
@@ -70,7 +71,7 @@ class _ShiftEditorDialogState extends State<ShiftEditorDialog> {
               : widget.station.activeWindows.first.startTime);
       final startMinutes = start.hour * 60 + start.minute;
       final endMinutes =
-          (startMinutes + widget.station.defaultShiftMinutes) % (24 * 60);
+          (startMinutes + Constants.DEFAULT_SHIFT_MINUTES) % (24 * 60);
       end = TimeOfDay(hour: endMinutes ~/ 60, minute: endMinutes % 60);
     }
   }

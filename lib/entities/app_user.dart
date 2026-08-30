@@ -1,5 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'org_scope.dart';
+
+export 'org_scope.dart';
+
 /// Role hierarchy. The Firebase custom claim is authoritative; the Firestore
 /// `users/{uid}.role` field mirrors it for UI and queries.
 enum UserRole {
@@ -42,6 +46,11 @@ class AppUser {
   /// The fixed common training course the user belongs to — ascending
   /// order, so a lower number means an earlier (more senior) cohort.
   final int? courseNumber;
+
+  /// Organizational placement; null while unassigned.
+  final Site? site;
+  final Department? department;
+  final JobRole? jobRole;
   final UserStatus status;
   final Map<String, dynamic> fcmTokens;
   final DateTime? createdAt;
@@ -56,6 +65,9 @@ class AppUser {
     this.certifications = const [],
     this.certificationTimes = const {},
     this.courseNumber,
+    this.site,
+    this.department,
+    this.jobRole,
     this.status = UserStatus.available,
     this.fcmTokens = const {},
     this.createdAt,
@@ -66,6 +78,13 @@ class AppUser {
 
   bool hasAllCertifications(List<String> required) =>
       required.every(certifications.contains);
+
+  /// Whether the user satisfies an org scope (of a station or a
+  /// certification). A null scope layer is a wildcard.
+  bool matchesScope({Site? site, Department? department, JobRole? jobRole}) =>
+      (site == null || this.site == site) &&
+      (department == null || this.department == department) &&
+      (jobRole == null || this.jobRole == jobRole);
 
   DateTime? certificationEarnedAt(String certId) => certificationTimes[certId];
 
@@ -81,6 +100,9 @@ class AppUser {
             (map['certificationTimes'] as Map? ?? const {}).map((key, value) =>
                 MapEntry(key as String, (value as Timestamp).toDate())),
         courseNumber: (map['courseNumber'] as num?)?.toInt(),
+        site: Site.fromString(map['site'] as String?),
+        department: Department.fromString(map['department'] as String?),
+        jobRole: JobRole.fromString(map['jobRole'] as String?),
         status: UserStatus.fromString(map['status'] as String?),
         fcmTokens: Map<String, dynamic>.from(map['fcmTokens'] as Map? ?? {}),
         createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
@@ -99,6 +121,9 @@ class AppUser {
         'certificationTimes': certificationTimes.map(
             (key, value) => MapEntry(key, Timestamp.fromDate(value))),
         if (courseNumber != null) 'courseNumber': courseNumber,
+        if (site != null) 'site': site!.wireName,
+        if (department != null) 'department': department!.name,
+        if (jobRole != null) 'jobRole': jobRole!.name,
         'status': status.name,
         'fcmTokens': fcmTokens,
         if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),
@@ -111,6 +136,9 @@ class AppUser {
     List<String>? certifications,
     Map<String, DateTime>? certificationTimes,
     int? courseNumber,
+    Site? site,
+    Department? department,
+    JobRole? jobRole,
     UserStatus? status,
   }) =>
       AppUser(
@@ -122,6 +150,9 @@ class AppUser {
         certifications: certifications ?? this.certifications,
         certificationTimes: certificationTimes ?? this.certificationTimes,
         courseNumber: courseNumber ?? this.courseNumber,
+        site: site ?? this.site,
+        department: department ?? this.department,
+        jobRole: jobRole ?? this.jobRole,
         status: status ?? this.status,
         fcmTokens: fcmTokens,
         createdAt: createdAt,

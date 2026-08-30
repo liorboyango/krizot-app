@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../app_config/l10n/gen/app_localizations.dart';
 import '../../../app_config/service_locator.dart';
 import '../../../entities/certification.dart';
+import '../../../entities/org_scope.dart';
 import '../../../entities/station.dart';
 import '../../../entities/time_window.dart';
 import '../../../managers/stations_manager.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/snackbar_util.dart';
 import '../../empty_state.dart';
+import '../../org_scope_picker.dart';
 import '../../status_chip.dart';
 
 class StationsScreen extends StatefulWidget {
@@ -82,8 +84,7 @@ class _StationsScreenState extends State<StationsScreen> {
                 final stations = snapshot.data!
                     .where((s) =>
                         searchQuery.isEmpty ||
-                        s.name.toLowerCase().contains(searchQuery) ||
-                        s.location.toLowerCase().contains(searchQuery))
+                        s.name.toLowerCase().contains(searchQuery))
                     .toList();
                 if (stations.isEmpty) {
                   return EmptyState(
@@ -153,10 +154,13 @@ class _StationTile extends StatelessWidget {
           padding: const EdgeInsets.only(top: 4),
           child: Text(
             [
-              station.location,
               station.isAroundTheClock
                   ? l10n.manning247
                   : l10n.onDemandWindows(station.activeWindows.join(', ')),
+              ?OrgScopePicker.scopeLabel(l10n,
+                  site: station.site,
+                  department: station.department,
+                  jobRole: station.jobRole),
               if (certNames.isNotEmpty)
                 l10n.requiresCerts(certNames.join(', ')),
             ].join('  ·  '),
@@ -236,12 +240,8 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
   final formKey = GlobalKey<FormState>();
   late final nameController =
       TextEditingController(text: widget.station?.name);
-  late final locationController =
-      TextEditingController(text: widget.station?.location);
   late final notesController =
       TextEditingController(text: widget.station?.notes);
-  late final shiftMinutesController = TextEditingController(
-      text: '${widget.station?.defaultShiftMinutes ?? 120}');
   late StationStatus status = widget.station?.status ?? StationStatus.active;
   late ManningType manningType =
       widget.station?.manningType ?? ManningType.aroundTheClock;
@@ -249,16 +249,31 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
   late Set<String> requiredCerts = {
     ...?widget.station?.requiredCertifications
   };
+  late Site? site = widget.station?.site;
+  late Department? department = widget.station?.department;
+  late JobRole? jobRole = widget.station?.jobRole;
   bool isBusy = false;
+
+  /// A certification is offered when its scope could apply to someone in
+  /// the station's scope (each layer unpinned on either side, or equal).
+  bool _certVisible(Certification certification) =>
+      requiredCerts.contains(certification.id) ||
+      ((certification.site == null ||
+              site == null ||
+              certification.site == site) &&
+          (certification.department == null ||
+              department == null ||
+              certification.department == department) &&
+          (certification.jobRole == null ||
+              jobRole == null ||
+              certification.jobRole == jobRole));
 
   bool get isEditing => widget.station != null;
 
   @override
   void dispose() {
     nameController.dispose();
-    locationController.dispose();
     notesController.dispose();
-    shiftMinutesController.dispose();
     super.dispose();
   }
 
@@ -275,13 +290,13 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
     final station = Station(
       id: widget.station?.id ?? '',
       name: nameController.text.trim(),
-      location: locationController.text.trim(),
       status: status,
       manningType: manningType,
       activeWindows: manningType == ManningType.onDemand ? windows : const [],
       requiredCertifications: requiredCerts.toList(),
-      defaultShiftMinutes:
-          int.tryParse(shiftMinutesController.text.trim()) ?? 120,
+      site: site,
+      department: department,
+      jobRole: jobRole,
       capacity: widget.station?.capacity ?? 1,
       notes: notesController.text.trim().isEmpty
           ? null
@@ -347,27 +362,19 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
                       ? l10n.nameRequired
                       : null,
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: locationController,
-                  decoration: InputDecoration(labelText: l10n.locationLabel),
-                  validator: (value) => (value == null || value.trim().isEmpty)
-                      ? l10n.locationRequired
-                      : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: shiftMinutesController,
-                  decoration: InputDecoration(
-                    labelText: l10n.defaultShiftLength,
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    final minutes = int.tryParse(value?.trim() ?? '');
-                    return (minutes == null || minutes <= 0)
-                        ? l10n.positiveMinutes
-                        : null;
-                  },
+                const SizedBox(height: 16),
+                Text(l10n.orgPlacementTitle,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                OrgScopePicker(
+                  site: site,
+                  department: department,
+                  jobRole: jobRole,
+                  onSiteChanged: (value) => setState(() => site = value),
+                  onDepartmentChanged: (value) =>
+                      setState(() => department = value),
+                  onJobRoleChanged: (value) =>
+                      setState(() => jobRole = value),
                 ),
                 const SizedBox(height: 16),
                 SegmentedButton<StationStatus>(
@@ -427,7 +434,10 @@ class _StationEditorDialogState extends State<_StationEditorDialog> {
                   initialData: stationsManager.certifications,
                   stream: stationsManager.certificationsStream,
                   builder: (context, snapshot) {
-                    final certifications = snapshot.data ?? const [];
+                    final certifications = (snapshot.data ??
+                            const <Certification>[])
+                        .where(_certVisible)
+                        .toList();
                     if (certifications.isEmpty) {
                       return Text(
                         l10n.noCertsDefinedAddOnStaff,

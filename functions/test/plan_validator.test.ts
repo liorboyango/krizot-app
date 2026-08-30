@@ -90,6 +90,56 @@ describe('checkAssignment', () => {
     ).toMatch(/lacks certification/);
   });
 
+  it('enforces the station org scope layer by layer', () => {
+    const scoped = context({
+      users: [
+        user('alice', {
+          site: '506',
+          department: 'mesima',
+          jobRole: 'hagana',
+        }),
+      ],
+    });
+    scoped.stations[0] = {
+      ...scoped.stations[0],
+      site: '506',
+      department: 'mesima',
+      jobRole: 'hagana',
+    };
+    const assignment = { shiftId: 's1', userId: 'alice' };
+    expect(checkAssignment(assignment, scoped, [])).toBeNull();
+
+    scoped.stations[0].site = '509';
+    expect(checkAssignment(assignment, scoped, [])).toMatch(/not in unit/);
+
+    scoped.stations[0].site = '506';
+    scoped.stations[0].department = 'taavura';
+    expect(checkAssignment(assignment, scoped, [])).toMatch(
+      /not in department/,
+    );
+
+    scoped.stations[0].department = 'mesima';
+    scoped.stations[0].jobRole = 'officer';
+    expect(checkAssignment(assignment, scoped, [])).toMatch(
+      /does not have the officer role/,
+    );
+  });
+
+  it('treats unset scope layers as wildcards', () => {
+    // The default station has no scope; a user without placement passes.
+    expect(
+      checkAssignment({ shiftId: 's1', userId: 'alice' }, context(), []),
+    ).toBeNull();
+    // A partially scoped station only pins the layers it sets.
+    const scoped = context({
+      users: [user('alice', { department: 'mesima' })],
+    });
+    scoped.stations[0] = { ...scoped.stations[0], department: 'mesima' };
+    expect(
+      checkAssignment({ shiftId: 's1', userId: 'alice' }, scoped, []),
+    ).toBeNull();
+  });
+
   it('rejects sick and unavailable users', () => {
     const ctx = context({
       users: [user('alice', { status: 'sick' })],

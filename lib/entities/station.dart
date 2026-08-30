@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'org_scope.dart';
 import 'time_window.dart';
 
 enum StationStatus {
@@ -33,7 +34,6 @@ enum ManningType {
 class Station {
   final String id;
   final String name;
-  final String location;
   final StationStatus status;
   final ManningType manningType;
 
@@ -43,7 +43,12 @@ class Station {
 
   /// Certification IDs an assignee must ALL hold.
   final List<String> requiredCertifications;
-  final int defaultShiftMinutes;
+
+  /// Org scope — only users matching every non-null layer may man the
+  /// station. All-null = open to everyone.
+  final Site? site;
+  final Department? department;
+  final JobRole? jobRole;
   final int capacity;
   final String? notes;
   final DateTime? createdAt;
@@ -52,12 +57,13 @@ class Station {
   const Station({
     required this.id,
     required this.name,
-    required this.location,
     this.status = StationStatus.active,
     this.manningType = ManningType.aroundTheClock,
     this.activeWindows = const [],
     this.requiredCertifications = const [],
-    this.defaultShiftMinutes = 120,
+    this.site,
+    this.department,
+    this.jobRole,
     this.capacity = 1,
     this.notes,
     this.createdAt,
@@ -69,7 +75,6 @@ class Station {
   factory Station.fromMap(String id, Map<String, dynamic> map) => Station(
         id: id,
         name: map['name'] as String? ?? '',
-        location: map['location'] as String? ?? '',
         status: StationStatus.fromString(map['status'] as String?),
         manningType: ManningType.fromString(map['manningType'] as String?),
         activeWindows: (map['activeWindows'] as List? ?? const [])
@@ -77,7 +82,9 @@ class Station {
             .toList(),
         requiredCertifications: List<String>.from(
             map['requiredCertifications'] as List? ?? const []),
-        defaultShiftMinutes: (map['defaultShiftMinutes'] as num?)?.toInt() ?? 120,
+        site: Site.fromString(map['site'] as String?),
+        department: Department.fromString(map['department'] as String?),
+        jobRole: JobRole.fromString(map['jobRole'] as String?),
         capacity: (map['capacity'] as num?)?.toInt() ?? 1,
         notes: map['notes'] as String?,
         createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
@@ -89,12 +96,13 @@ class Station {
 
   Map<String, dynamic> toMap() => {
         'name': name,
-        'location': location,
         'status': status.name,
         'manningType': manningType.wireName,
         'activeWindows': activeWindows.map((w) => w.toMap()).toList(),
         'requiredCertifications': requiredCertifications,
-        'defaultShiftMinutes': defaultShiftMinutes,
+        if (site != null) 'site': site!.wireName,
+        if (department != null) 'department': department!.name,
+        if (jobRole != null) 'jobRole': jobRole!.name,
         'capacity': capacity,
         if (notes != null) 'notes': notes,
         if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),

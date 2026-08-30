@@ -257,22 +257,6 @@ class _FocusCard extends StatelessWidget {
                 color: AppColors.textPrimary,
               ),
             ),
-            if (station != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Row(
-                  children: [
-                    const Icon(Icons.place,
-                        size: 16, color: AppColors.textSecondary),
-                    const SizedBox(width: 4),
-                    Text(
-                      station.location,
-                      style:
-                          const TextStyle(color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
             const SizedBox(height: 10),
             Text(
               '${TimeUtil.formatDayLabel(shift.start)}  ·  '
@@ -314,10 +298,8 @@ class _ShiftListTile extends StatelessWidget {
             style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(
           '${TimeUtil.formatDayLabel(shift.start)}  ·  '
-          '${TimeUtil.formatRange(shift.start, shift.end)}'
-          '${station != null ? '\n${station.location}' : ''}',
+          '${TimeUtil.formatRange(shift.start, shift.end)}',
         ),
-        isThreeLine: station != null,
         trailing: shift.acknowledged ? null : _AcknowledgeButton(shift: shift),
       ),
     );

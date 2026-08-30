@@ -126,6 +126,31 @@ class UserService {
     }
   }
 
+  /// Manager-only: place the user in the org tree (site, department, role).
+  /// A null value clears that layer.
+  Future<bool> updateOrgAssignment(
+    String uid, {
+    required Site? site,
+    required Department? department,
+    required JobRole? jobRole,
+  }) async {
+    const METHOD = 'updateOrgAssignment';
+    _log.info('$METHOD - START - uid: $uid '
+        '${site?.wireName}/${department?.name}/${jobRole?.name}');
+    try {
+      await _firestore.collection(Constants.COLLECTION_USERS).doc(uid).update({
+        'site': site?.wireName ?? FieldValue.delete(),
+        'department': department?.name ?? FieldValue.delete(),
+        'jobRole': jobRole?.name ?? FieldValue.delete(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      _log.severe('$METHOD - Error: $e');
+      return false;
+    }
+  }
+
   /// Manager-only: set the user's fixed training-course number (cohort).
   Future<bool> updateCourseNumber(String uid, int? courseNumber) async {
     const METHOD = 'updateCourseNumber';

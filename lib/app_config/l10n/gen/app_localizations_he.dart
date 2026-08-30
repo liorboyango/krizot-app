@@ -142,7 +142,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String autoFillExplainer(String date) {
-    return 'מילוי כל המשמרות הפנויות ב$date לפי זמינות והסמכות הצוות.';
+    return 'יצירת המשמרות החסרות של היום, ואז מילוי כל המשמרות הפנויות ב$date לפי זמינות והסמכות הצוות.';
   }
 
   @override
@@ -177,6 +177,17 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get runAutoFill => 'הפעלת מילוי אוטומטי';
+
+  @override
+  String createdShiftsNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'נוצרו $count משמרות חסרות',
+      one: 'נוצרה משמרת חסרה אחת',
+    );
+    return '$_temp0';
+  }
 
   @override
   String findReplacementTitle(String station) {
@@ -279,6 +290,62 @@ class AppLocalizationsHe extends AppLocalizations {
   String get certificationsTitle => 'הסמכות';
 
   @override
+  String get listViewLabel => 'רשימה';
+
+  @override
+  String get calendarViewLabel => 'לוח שנה';
+
+  @override
+  String get unitLabel => 'יחידה';
+
+  @override
+  String get allUnits => 'הכל';
+
+  @override
+  String get departmentMesima => 'משימה';
+
+  @override
+  String get departmentTaavura => 'תעבורה';
+
+  @override
+  String get jobRoleHagana => 'הגנה';
+
+  @override
+  String get jobRoleBakara => 'בקרה';
+
+  @override
+  String get jobRoleOfficer => 'קצין';
+
+  @override
+  String get jobRoleLabel => 'תפקיד מקצועי';
+
+  @override
+  String get departmentLabel => 'מחלקה';
+
+  @override
+  String get unassignedSection => 'ללא שיוך';
+
+  @override
+  String get noJobRoleSection => 'ללא תפקיד';
+
+  @override
+  String get orgPlacementTitle => 'שיוך ארגוני';
+
+  @override
+  String get noneOption => 'ללא';
+
+  @override
+  String get staffColumn => 'צוות';
+
+  @override
+  String get openAvailabilityCalendar => 'יומן זמינות';
+
+  @override
+  String userAvailabilityTitle(String name) {
+    return '$name — זמינות';
+  }
+
+  @override
   String get noStaffYet =>
       'אין צוות עדיין — משתמשים יופיעו כאן לאחר ההתחברות הראשונה שלהם.';
 
@@ -375,18 +442,6 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get nameRequired => 'חובה להזין שם';
-
-  @override
-  String get locationLabel => 'מיקום';
-
-  @override
-  String get locationRequired => 'חובה להזין מיקום';
-
-  @override
-  String get defaultShiftLength => 'אורך משמרת ברירת מחדל (בדקות)';
-
-  @override
-  String get positiveMinutes => 'הזינו מספר דקות חיובי';
 
   @override
   String get stationActive => 'פעילה';

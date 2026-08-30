@@ -1,16 +1,24 @@
 /**
  * autoFillSchedule({date: 'YYYY-MM-DD'})
  *
- * LLM proposes → validator filters → violations re-prompted (repair loop) →
- * greedy filler covers whatever is left → per-shift transactional commit
- * (re-checking openness). Always returns a legal, possibly partial, fill.
+ * Missing shifts are created first (each station's manning windows split
+ * into 2h-default / 3h-max blocks), then: LLM proposes → validator filters →
+ * violations re-prompted (repair loop) → greedy filler covers whatever is
+ * left → per-shift transactional commit (re-checking openness). Always
+ * returns a legal, possibly partial, fill.
  */
 
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 
-import { COLLECTION_SHIFTS, REGION } from '../constants';
+import {
+  COLLECTION_SHIFTS,
+  DEFAULT_SHIFT_MINUTES,
+  MAX_SHIFT_MINUTES,
+  REGION,
+  SCHEDULE_TIMEZONE,
+} from '../constants';
 import {
   getDb,
   loadAvailabilityOverlapping,
@@ -22,7 +30,11 @@ import {
 } from '../domain/firestore';
 import { fillGreedy } from '../domain/greedy_filler';
 import { validatePlan, Violation } from '../domain/plan_validator';
-import { Assignment, PlanningContext } from '../domain/types';
+import {
+  generateMissingShifts,
+  zonedDayStartMs,
+} from '../domain/shift_generator';
+import { Assignment, PlanningContext, ShiftRecord } from '../domain/types';
 import { generateStructured } from '../llm/llm_client';
 import { AUTO_FILL_SYSTEM, buildAutoFillPrompt } from '../llm/prompts';
 import { AutoFillPlanSchema } from '../llm/schemas';
@@ -44,7 +56,7 @@ export const autoFillSchedule = onCall(
     // Advisory manager guidance for the LLM — hard constraints still win.
     const instructions = rawInstructions?.trim().slice(0, 2000) || undefined;
 
-    const [config, users, stations, shifts, trainingSessions] =
+    const [config, users, stations, existingShifts, trainingSessions] =
       await Promise.all([
         loadLlmConfig(),
         loadUsers(),
@@ -52,9 +64,58 @@ export const autoFillSchedule = onCall(
         loadShiftsForDay(dayKey),
         loadTrainingForDay(dayKey),
       ]);
+
+    // Create every still-missing shift of the day before assigning anyone:
+    // stations only define WHEN manning is needed — block durations are
+    // generated here and each occurrence stays individually editable.
+    const db = getDb();
+    const dayStartMs = zonedDayStartMs(dayKey, SCHEDULE_TIMEZONE);
+    const specs = generateMissingShifts(
+      stations,
+      existingShifts,
+      dayKey,
+      dayStartMs,
+      dayStartMs + 24 * 3_600_000,
+      { defaultMinutes: DEFAULT_SHIFT_MINUTES, maxMinutes: MAX_SHIFT_MINUTES },
+    );
+    const created: ShiftRecord[] = [];
+    let batch = db.batch();
+    let batchOps = 0;
+    for (const spec of specs) {
+      const ref = db.collection(COLLECTION_SHIFTS).doc();
+      batch.set(ref, {
+        stationId: spec.stationId,
+        userId: null,
+        start: Timestamp.fromMillis(spec.startMs),
+        end: Timestamp.fromMillis(spec.endMs),
+        dayKey: spec.dayKey,
+        status: 'open',
+        acknowledged: false,
+        ackAt: null,
+        source: 'autoFill',
+        createdBy: uid,
+        lastModifiedBy: uid,
+        lastModifiedAt: FieldValue.serverTimestamp(),
+      });
+      created.push({ id: ref.id, userId: null, ...spec });
+      if (++batchOps >= 450) {
+        await batch.commit();
+        batch = db.batch();
+        batchOps = 0;
+      }
+    }
+    if (batchOps > 0) await batch.commit();
+    logger.info(`autoFill ${dayKey}: created ${created.length} missing shifts`);
+
+    const shifts = [...existingShifts, ...created];
     const openCount = shifts.filter((s) => s.userId === null).length;
     if (openCount === 0) {
-      return { filled: 0, unfilled: [], notes: 'No open shifts on this day.' };
+      return {
+        filled: 0,
+        created: 0,
+        unfilled: [],
+        notes: 'No open shifts on this day.',
+      };
     }
     // Presence windows overlapping the day's shifts.
     const availability = await loadAvailabilityOverlapping(
@@ -105,7 +166,6 @@ export const autoFillSchedule = onCall(
     const finalPlan = [...accepted, ...greedyAdditions];
 
     // Commit per shift, re-checking openness to survive concurrent edits.
-    const db = getDb();
     const committed: Assignment[] = [];
     for (const assignment of finalPlan) {
       const ref = db.collection(COLLECTION_SHIFTS).doc(assignment.shiftId);
@@ -136,6 +196,6 @@ export const autoFillSchedule = onCall(
     const unfilled = shifts
       .filter((s) => s.userId === null && !committedIds.has(s.id))
       .map((s) => s.id);
-    return { filled: committed.length, unfilled, notes };
+    return { filled: committed.length, created: created.length, unfilled, notes };
   },
 );

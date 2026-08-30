@@ -135,7 +135,6 @@ void main() {
     const station = Station(
       id: 'station1',
       name: 'Gate',
-      location: 'North',
       requiredCertifications: ['certGuard'],
     );
     final now = DateTime.now();
@@ -170,7 +169,6 @@ void main() {
     const station = Station(
       id: 'station1',
       name: 'Gate',
-      location: 'North',
       requiredCertifications: ['certGuard'],
     );
     final now = DateTime.now();
@@ -218,7 +216,6 @@ void main() {
     const station = Station(
       id: 'station1',
       name: 'Gate',
-      location: 'North',
       requiredCertifications: ['certGuard'],
     );
     final now = DateTime.now();

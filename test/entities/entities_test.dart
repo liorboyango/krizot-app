@@ -48,7 +48,6 @@ void main() {
       const station = Station(
         id: 's1',
         name: 'Station B',
-        location: 'North gate',
         manningType: ManningType.aroundTheClock,
         requiredCertifications: ['certGuard'],
       );
@@ -60,7 +59,6 @@ void main() {
       const onDemand = Station(
         id: 's2',
         name: 'Station A',
-        location: 'East',
         manningType: ManningType.onDemand,
         activeWindows: [TimeWindow(start: '08:00', end: '10:00')],
       );

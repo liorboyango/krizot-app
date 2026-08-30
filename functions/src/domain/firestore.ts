@@ -64,8 +64,18 @@ export async function loadUsers(): Promise<UserRecord[]> {
       certifications: (data.certifications as string[]) ?? [],
       status: (data.status as UserRecord['status']) ?? 'available',
       fcmTokens: (data.fcmTokens as Record<string, unknown>) ?? {},
+      site: data.site as string | undefined,
+      department: data.department as string | undefined,
+      jobRole: data.jobRole as string | undefined,
     };
   });
+}
+
+/** 'HH:mm' → minutes from midnight. */
+function parseHhmm(value: string | undefined): number {
+  const [hours, minutes] = (value ?? '').split(':').map(Number);
+  if (Number.isNaN(hours)) return 0;
+  return hours * 60 + (Number.isNaN(minutes) ? 0 : minutes);
 }
 
 export async function loadStations(): Promise<StationRecord[]> {
@@ -77,6 +87,17 @@ export async function loadStations(): Promise<StationRecord[]> {
       name: (data.name as string) ?? '',
       status: (data.status as StationRecord['status']) ?? 'active',
       requiredCertifications: (data.requiredCertifications as string[]) ?? [],
+      manningType: data.manningType === '24x7' ? '24x7' : 'onDemand',
+      activeWindows: (
+        (data.activeWindows as { start?: string; end?: string }[]) ?? []
+      ).map((window) => ({
+        startMinutes: parseHhmm(window.start),
+        endMinutes: parseHhmm(window.end),
+      })),
+      capacity: (data.capacity as number) ?? 1,
+      site: data.site as string | undefined,
+      department: data.department as string | undefined,
+      jobRole: data.jobRole as string | undefined,
     };
   });
 }

@@ -55,3 +55,16 @@ State management - use RxDart + GetIt; Service + Manager using streams, singleto
 5. Training Sessions: schedulable blocks where one or more certified users train an uncertified trainee toward a certification. Types: Simulation (staffing defined per certification — how many holders of which certifications), Spectation (exactly one certified spectator), Tutoring (one-on-one). Session priority defaults to the certification's level (higher level = higher priority) and stays editable. Sessions appear on the scheduler grid, and participants count as busy for shift assignment (client eligibility + backend plan validator + auto-fill).
 
 6. Per-User Schedule: in the scheduler, pressing a staff chip or searching staff opens that user's weekly schedule (presence windows, shifts, training sessions).
+
+# Scheduling Extensions (v3)
+1. Auto-fill creates shifts first: the `autoFillSchedule` callable generates every still-missing shift of the day from the stations' manning windows (24/7 → whole day; on-demand → each active window, capacity-aware) before assigning staff. Blocks default to 2 hours and never exceed 3 hours; managers can still edit any single occurrence's duration afterwards.
+
+2. Stations define WHEN, not HOW LONG: the station `location` and `defaultShiftMinutes` fields are gone. Shift durations come from the auto-fill generator (or manual edits of a specific occurrence).
+
+3. Organizational layers on users: `site` ('506' | '509'), `department` ('mesima' | 'taavura') and `jobRole` ('hagana' | 'bakara' | 'officer'), managed from the Staff editor. The Staff screen has a Unit selector plus Department → Role checkbox filters, and the list is sectioned per Department → Role (with an Unassigned tail). The LLM planner receives these tags so manager instructions can reference them.
+
+3b. Org-scoped stations & certifications: stations and certifications may pin any of the three layers (`site`/`department`/`jobRole`; null = everyone). A user may only man a station — or be offered a certification — when every pinned layer matches their placement. Enforced in the client eligibility check, the backend plan validator (auto-fill/replacement), and the seeder's assigner; the editors only offer certifications whose scope is compatible with the user/station being edited.
+
+4. Staff calendar view: the Staff screen toggles between the sectioned list and a users × week-days calendar showing presence windows and assigned shifts, with the AI Auto-Fill button (including the free-text prompt notes box).
+
+5. Per-user availability calendar: every staff row has a calendar button opening a popup week calendar of that user's presence windows, where managers add/edit/delete windows.

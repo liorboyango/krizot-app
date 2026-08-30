@@ -781,8 +781,10 @@ class _ShiftChip extends StatelessWidget {
           onTap: () => _showActions(context, assignee, needsHealing),
           child: Container(
             margin: const EdgeInsets.only(bottom: 4),
+            // Modest padding + tight line height: the chip must fit the
+            // fixed timeline lane even with the drag-over 2px border.
             padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: background,
               borderRadius: BorderRadius.circular(6),
@@ -795,11 +797,17 @@ class _ShiftChip extends StatelessWidget {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         TimeUtil.formatRange(shift.start, shift.end),
+                        // Narrow chips (short shifts clamp to a 44px min
+                        // width) must truncate, not wrap past the lane.
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 11,
+                          height: 1.25,
                           fontWeight: FontWeight.w700,
                           color: foreground,
                         ),
@@ -812,8 +820,10 @@ class _ShiftChip extends StatelessWidget {
                                     .openShiftShort),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style:
-                            TextStyle(fontSize: 11, color: foreground),
+                        style: TextStyle(
+                            fontSize: 11,
+                            height: 1.25,
+                            color: foreground),
                       ),
                     ],
                   ),
@@ -1196,7 +1206,9 @@ class _TrainingChip extends StatelessWidget {
       onTap: () => _showActions(context),
       child: Container(
         margin: const EdgeInsets.only(bottom: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        // Tighter than the shift chip: its 1px border must also fit inside
+        // the fixed timeline lane height.
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(6),
@@ -1207,6 +1219,7 @@ class _TrainingChip extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     '${TimeUtil.formatRange(session.start, session.end)} · '
@@ -1215,6 +1228,7 @@ class _TrainingChip extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 11,
+                      height: 1.25,
                       fontWeight: FontWeight.w700,
                       color: AppColors.trainingText,
                     ),
@@ -1225,7 +1239,9 @@ class _TrainingChip extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontSize: 11, color: AppColors.trainingText),
+                        fontSize: 11,
+                        height: 1.25,
+                        color: AppColors.trainingText),
                   ),
                 ],
               ),

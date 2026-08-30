@@ -359,7 +359,7 @@ abstract class AppLocalizations {
   /// No description provided for @autoFillExplainer.
   ///
   /// In en, this message translates to:
-  /// **'Fill all open shifts on {date} using staff availability and certifications.'**
+  /// **'Creates the day\'s missing shifts, then fills all open shifts on {date} using staff availability and certifications.'**
   String autoFillExplainer(String date);
 
   /// No description provided for @aiInstructionsLabel.
@@ -403,6 +403,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Run Auto-Fill'**
   String get runAutoFill;
+
+  /// No description provided for @createdShiftsNote.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Created 1 missing shift} other{Created {count} missing shifts}}'**
+  String createdShiftsNote(int count);
 
   /// No description provided for @findReplacementTitle.
   ///
@@ -559,6 +565,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Certifications'**
   String get certificationsTitle;
+
+  /// No description provided for @listViewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'List'**
+  String get listViewLabel;
+
+  /// No description provided for @calendarViewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar'**
+  String get calendarViewLabel;
+
+  /// No description provided for @unitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get unitLabel;
+
+  /// No description provided for @allUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get allUnits;
+
+  /// No description provided for @departmentMesima.
+  ///
+  /// In en, this message translates to:
+  /// **'Mesima'**
+  String get departmentMesima;
+
+  /// No description provided for @departmentTaavura.
+  ///
+  /// In en, this message translates to:
+  /// **'Taavura'**
+  String get departmentTaavura;
+
+  /// No description provided for @jobRoleHagana.
+  ///
+  /// In en, this message translates to:
+  /// **'Hagana'**
+  String get jobRoleHagana;
+
+  /// No description provided for @jobRoleBakara.
+  ///
+  /// In en, this message translates to:
+  /// **'Bakara'**
+  String get jobRoleBakara;
+
+  /// No description provided for @jobRoleOfficer.
+  ///
+  /// In en, this message translates to:
+  /// **'Officer'**
+  String get jobRoleOfficer;
+
+  /// No description provided for @jobRoleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Role'**
+  String get jobRoleLabel;
+
+  /// No description provided for @departmentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Department'**
+  String get departmentLabel;
+
+  /// No description provided for @unassignedSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Unassigned'**
+  String get unassignedSection;
+
+  /// No description provided for @noJobRoleSection.
+  ///
+  /// In en, this message translates to:
+  /// **'No role'**
+  String get noJobRoleSection;
+
+  /// No description provided for @orgPlacementTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Organization'**
+  String get orgPlacementTitle;
+
+  /// No description provided for @noneOption.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get noneOption;
+
+  /// No description provided for @staffColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Staff'**
+  String get staffColumn;
+
+  /// No description provided for @openAvailabilityCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability calendar'**
+  String get openAvailabilityCalendar;
+
+  /// No description provided for @userAvailabilityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} — availability'**
+  String userAvailabilityTitle(String name);
 
   /// No description provided for @noStaffYet.
   ///
@@ -733,30 +847,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Name is required'**
   String get nameRequired;
-
-  /// No description provided for @locationLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Location'**
-  String get locationLabel;
-
-  /// No description provided for @locationRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Location is required'**
-  String get locationRequired;
-
-  /// No description provided for @defaultShiftLength.
-  ///
-  /// In en, this message translates to:
-  /// **'Default shift length (minutes)'**
-  String get defaultShiftLength;
-
-  /// No description provided for @positiveMinutes.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter a positive number of minutes'**
-  String get positiveMinutes;
 
   /// No description provided for @stationActive.
   ///

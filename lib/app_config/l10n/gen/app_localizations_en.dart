@@ -143,7 +143,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String autoFillExplainer(String date) {
-    return 'Fill all open shifts on $date using staff availability and certifications.';
+    return 'Creates the day\'s missing shifts, then fills all open shifts on $date using staff availability and certifications.';
   }
 
   @override
@@ -178,6 +178,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get runAutoFill => 'Run Auto-Fill';
+
+  @override
+  String createdShiftsNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Created $count missing shifts',
+      one: 'Created 1 missing shift',
+    );
+    return '$_temp0';
+  }
 
   @override
   String findReplacementTitle(String station) {
@@ -280,6 +291,62 @@ class AppLocalizationsEn extends AppLocalizations {
   String get certificationsTitle => 'Certifications';
 
   @override
+  String get listViewLabel => 'List';
+
+  @override
+  String get calendarViewLabel => 'Calendar';
+
+  @override
+  String get unitLabel => 'Unit';
+
+  @override
+  String get allUnits => 'All';
+
+  @override
+  String get departmentMesima => 'Mesima';
+
+  @override
+  String get departmentTaavura => 'Taavura';
+
+  @override
+  String get jobRoleHagana => 'Hagana';
+
+  @override
+  String get jobRoleBakara => 'Bakara';
+
+  @override
+  String get jobRoleOfficer => 'Officer';
+
+  @override
+  String get jobRoleLabel => 'Role';
+
+  @override
+  String get departmentLabel => 'Department';
+
+  @override
+  String get unassignedSection => 'Unassigned';
+
+  @override
+  String get noJobRoleSection => 'No role';
+
+  @override
+  String get orgPlacementTitle => 'Organization';
+
+  @override
+  String get noneOption => 'None';
+
+  @override
+  String get staffColumn => 'Staff';
+
+  @override
+  String get openAvailabilityCalendar => 'Availability calendar';
+
+  @override
+  String userAvailabilityTitle(String name) {
+    return '$name — availability';
+  }
+
+  @override
   String get noStaffYet =>
       'No staff yet — users appear here after their first sign-in.';
 
@@ -378,18 +445,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get nameRequired => 'Name is required';
-
-  @override
-  String get locationLabel => 'Location';
-
-  @override
-  String get locationRequired => 'Location is required';
-
-  @override
-  String get defaultShiftLength => 'Default shift length (minutes)';
-
-  @override
-  String get positiveMinutes => 'Enter a positive number of minutes';
 
   @override
   String get stationActive => 'Active';

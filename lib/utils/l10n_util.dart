@@ -27,4 +27,17 @@ class L10nUtil {
         TrainingType.spectation => l10n.trainingTypeSpectation,
         TrainingType.tutoring => l10n.trainingTypeTutoring,
       };
+
+  static String departmentLabel(AppLocalizations l10n, Department department) =>
+      switch (department) {
+        Department.mesima => l10n.departmentMesima,
+        Department.taavura => l10n.departmentTaavura,
+      };
+
+  static String jobRoleLabel(AppLocalizations l10n, JobRole jobRole) =>
+      switch (jobRole) {
+        JobRole.hagana => l10n.jobRoleHagana,
+        JobRole.bakara => l10n.jobRoleBakara,
+        JobRole.officer => l10n.jobRoleOfficer,
+      };
 }

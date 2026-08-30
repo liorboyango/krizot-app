@@ -54,7 +54,7 @@
   "deleteShift": "Delete shift",
 
   "aiAutoFillTitle": "AI Auto-Fill",
-  "autoFillExplainer": "Fill all open shifts on {date} using staff availability and certifications.",
+  "autoFillExplainer": "Creates the day's missing shifts, then fills all open shifts on {date} using staff availability and certifications.",
   "@autoFillExplainer": {
     "placeholders": {
       "date": {
@@ -83,6 +83,14 @@
     }
   },
   "runAutoFill": "Run Auto-Fill",
+  "createdShiftsNote": "{count, plural, =1{Created 1 missing shift} other{Created {count} missing shifts}}",
+  "@createdShiftsNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
 
   "findReplacementTitle": "Find replacement — {station}",
   "@findReplacementTitle": {
@@ -164,6 +172,31 @@
   "roleEmployee": "Employee",
 
   "certificationsTitle": "Certifications",
+  "listViewLabel": "List",
+  "calendarViewLabel": "Calendar",
+  "unitLabel": "Unit",
+  "allUnits": "All",
+  "departmentMesima": "Mesima",
+  "departmentTaavura": "Taavura",
+  "jobRoleHagana": "Hagana",
+  "jobRoleBakara": "Bakara",
+  "jobRoleOfficer": "Officer",
+  "jobRoleLabel": "Role",
+  "departmentLabel": "Department",
+  "unassignedSection": "Unassigned",
+  "noJobRoleSection": "No role",
+  "orgPlacementTitle": "Organization",
+  "noneOption": "None",
+  "staffColumn": "Staff",
+  "openAvailabilityCalendar": "Availability calendar",
+  "userAvailabilityTitle": "{name} — availability",
+  "@userAvailabilityTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "noStaffYet": "No staff yet — users appear here after their first sign-in.",
   "noCertifications": "No certifications",
   "editStaffMember": "Edit staff member",
@@ -222,10 +255,6 @@
   "editStation": "Edit Station",
   "nameLabel": "Name",
   "nameRequired": "Name is required",
-  "locationLabel": "Location",
-  "locationRequired": "Location is required",
-  "defaultShiftLength": "Default shift length (minutes)",
-  "positiveMinutes": "Enter a positive number of minutes",
   "stationActive": "Active",
   "stationClosed": "Closed",
   "manningLabel": "Manning",

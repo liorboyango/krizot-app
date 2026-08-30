@@ -48,6 +48,18 @@ export function checkAssignment(
   const station = context.stations.find((s) => s.id === shift.stationId);
   if (!station) return `station ${shift.stationId} does not exist`;
   if (station.status !== 'active') return `station ${station.id} is closed`;
+
+  // Org scope: every layer the station pins must match the user's placement.
+  if (station.site && user.site !== station.site) {
+    return `user ${user.id} is not in unit ${station.site}`;
+  }
+  if (station.department && user.department !== station.department) {
+    return `user ${user.id} is not in department ${station.department}`;
+  }
+  if (station.jobRole && user.jobRole !== station.jobRole) {
+    return `user ${user.id} does not have the ${station.jobRole} role`;
+  }
+
   const missing = station.requiredCertifications.filter(
     (cert) => !user.certifications.includes(cert),
   );

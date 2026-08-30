@@ -158,11 +158,18 @@ class ShiftsManager {
   void previousDay() =>
       selectDate(selectedDate.subtract(const Duration(days: 1)));
 
-  /// Client-side mirror of the backend plan_validator predicate: certified
-  /// for the station, available, on-site per the availability calendar, and
-  /// free of overlapping shifts and training sessions.
+  /// Client-side mirror of the backend plan_validator predicate: in the
+  /// station's org scope, certified for the station, available, on-site per
+  /// the availability calendar, and free of overlapping shifts and training
+  /// sessions.
   bool isEligible(AppUser candidate, Station station, Shift shift) {
     if (!candidate.isAvailable) return false;
+    if (!candidate.matchesScope(
+        site: station.site,
+        department: station.department,
+        jobRole: station.jobRole)) {
+      return false;
+    }
     if (!candidate.hasAllCertifications(station.requiredCertifications)) {
       return false;
     }

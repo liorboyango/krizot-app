@@ -9,6 +9,8 @@ import { Violation } from '../domain/plan_validator';
 export const AUTO_FILL_SYSTEM = `You are a shift-scheduling assistant.
 Assign users to open shifts. Hard constraints (violations are rejected):
 - The user must hold ALL certifications required by the shift's station.
+- A station carrying site/department/jobRole tags may only be manned by
+  users whose corresponding tags are equal; untagged layers accept anyone.
 - The user's status must be "available".
 - No overlapping shifts for the same user.
 - A user's total assigned hours in the day must not exceed the stated cap.
@@ -42,6 +44,11 @@ function userLine(user: UserRecord): Record<string, unknown> {
     name: user.displayName,
     certifications: user.certifications,
     status: user.status,
+    // Organizational placement — lets manager instructions reference units,
+    // departments and roles ("only 506", "spread officers", …).
+    ...(user.site ? { site: user.site } : {}),
+    ...(user.department ? { department: user.department } : {}),
+    ...(user.jobRole ? { jobRole: user.jobRole } : {}),
   };
 }
 
@@ -58,6 +65,10 @@ export function buildAutoFillPrompt(
       stationId: station.id,
       name: station.name,
       requiredCertifications: station.requiredCertifications,
+      // Org scope: only users matching every set layer are eligible.
+      ...(station.site ? { site: station.site } : {}),
+      ...(station.department ? { department: station.department } : {}),
+      ...(station.jobRole ? { jobRole: station.jobRole } : {}),
     })),
     users: context.users.map(userLine),
     openShifts: context.shifts.filter((s) => s.userId === null).map(shiftLine),

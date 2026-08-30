@@ -11,6 +11,17 @@ export interface UserRecord {
   certifications: string[];
   status: UserStatus;
   fcmTokens: Record<string, unknown>;
+  /** Organizational placement — advisory context for the LLM planner. */
+  site?: string;
+  department?: string;
+  jobRole?: string;
+}
+
+/** A daily manning window, minutes from local midnight. An end at/below the
+ * start crosses midnight into the next day. */
+export interface StationWindow {
+  startMinutes: number;
+  endMinutes: number;
 }
 
 export interface StationRecord {
@@ -18,6 +29,17 @@ export interface StationRecord {
   name: string;
   status: 'active' | 'closed';
   requiredCertifications: string[];
+  /** '24x7' needs manning around the clock; 'onDemand' only during
+   * [activeWindows]. Absent = onDemand (no generation without windows). */
+  manningType?: '24x7' | 'onDemand';
+  activeWindows?: StationWindow[];
+  /** Simultaneous people required. Defaults to 1. */
+  capacity?: number;
+  /** Org scope — only users matching every set layer may man the station;
+   * an unset layer is a wildcard. */
+  site?: string;
+  department?: string;
+  jobRole?: string;
 }
 
 export interface ShiftRecord {

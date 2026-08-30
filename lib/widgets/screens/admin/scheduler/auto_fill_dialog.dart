@@ -6,8 +6,10 @@ import '../../../../services/functions_service.dart';
 import '../../../../utils/app_colors.dart';
 import '../../../../utils/time_util.dart';
 
-/// Runs the AI Auto-Fill callable for one day and shows the outcome. An
-/// optional free-text prompt is forwarded to the LLM as manager guidance.
+/// Runs the AI Auto-Fill callable for one day and shows the outcome —
+/// the backend first creates every still-missing shift of the day, then
+/// assigns staff. An optional free-text prompt is forwarded to the LLM as
+/// manager guidance.
 class AutoFillDialog extends StatefulWidget {
   final DateTime day;
 
@@ -58,6 +60,7 @@ class _AutoFillDialogState extends State<AutoFillDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final unfilled = (result?['unfilled'] as List?) ?? const [];
+    final createdCount = (result?['created'] as num?)?.toInt() ?? 0;
     return AlertDialog(
       title: Text(l10n.aiAutoFillTitle),
       content: SizedBox(
@@ -110,12 +113,19 @@ class _AutoFillDialogState extends State<AutoFillDialog> {
                   const Icon(Icons.check_circle,
                       color: AppColors.success, size: 20),
                   const SizedBox(width: 8),
-                  Text(
-                    l10n.filledShifts((result!['filled'] as num).toInt()) +
-                        (unfilled.isEmpty
-                            ? ''
-                            : l10n.leftOpen(unfilled.length)),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  Expanded(
+                    child: Text(
+                      [
+                        if (createdCount > 0)
+                          l10n.createdShiftsNote(createdCount),
+                        l10n.filledShifts(
+                                (result!['filled'] as num).toInt()) +
+                            (unfilled.isEmpty
+                                ? ''
+                                : l10n.leftOpen(unfilled.length)),
+                      ].join(' · '),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ],
               ),

@@ -33,7 +33,6 @@ void main() {
     final id = await manager.createStation(const Station(
       id: '',
       name: 'Station A',
-      location: 'East wing',
       manningType: ManningType.onDemand,
       activeWindows: [TimeWindow(start: '08:00', end: '10:00')],
       requiredCertifications: ['certC'],
@@ -52,7 +51,6 @@ void main() {
       await manager.updateStation(Station(
         id: created.id,
         name: 'Station A2',
-        location: created.location,
       )),
       isTrue,
     );
