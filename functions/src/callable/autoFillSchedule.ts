@@ -152,12 +152,26 @@ export const autoFillSchedule = onCall(
 
     // LLM plan with repair loop — advisory only; the validator decides.
     // Trainees are validated first so shift checks see them as busy.
+    // The loop lives inside a hard planning budget: whatever the model has
+    // not delivered when it runs out is finished greedily, so the callable
+    // always answers within its own 300s limit instead of 504-ing.
+    const PLANNING_BUDGET_MS = 210_000;
+    const MIN_ATTEMPT_MS = 30_000;
+    const planningStart = Date.now();
     let accepted: Assignment[] = [];
     let acceptedTrainees: TraineeAssignment[] = [];
     let notes = '';
     let violations: Violation[] = [];
     let traineeViolations: TraineeViolation[] = [];
     for (let attempt = 0; attempt <= config.maxRepairAttempts; attempt++) {
+      const remainingMs =
+        PLANNING_BUDGET_MS - (Date.now() - planningStart);
+      if (remainingMs < MIN_ATTEMPT_MS) {
+        logger.warn(
+          `autoFill attempt ${attempt} skipped: planning budget exhausted`,
+        );
+        break;
+      }
       try {
         const plan = await generateStructured({
           config,
@@ -170,6 +184,7 @@ export const autoFillSchedule = onCall(
             traineeViolations,
             instructions,
           ),
+          abortSignal: AbortSignal.timeout(remainingMs),
         });
         notes = plan.notes;
         const traineeResult = validateTraineePlan(

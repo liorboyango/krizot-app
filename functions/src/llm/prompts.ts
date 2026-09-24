@@ -70,6 +70,13 @@ export function buildAutoFillPrompt(
   traineeViolations: TraineeViolation[] = [],
   instructions?: string,
 ): string {
+  // Only assignable people go to the model — the validator rejects everyone
+  // else anyway, and on a large roster the excess users (plus their presence
+  // windows) dwarf the actual planning problem in the context window.
+  const assignableUsers = context.users.filter(
+    (user) => user.status === 'available',
+  );
+  const assignableIds = new Set(assignableUsers.map((user) => user.id));
   const payload = {
     date: dayKey,
     maxDailyHours: context.maxDailyHours,
@@ -82,16 +89,18 @@ export function buildAutoFillPrompt(
       ...(station.department ? { department: station.department } : {}),
       ...(station.jobRole ? { jobRole: station.jobRole } : {}),
     })),
-    users: context.users.map(userLine),
+    users: assignableUsers.map(userLine),
     openShifts: context.shifts.filter((s) => s.userId === null).map(shiftLine),
     existingAssignments: context.shifts
       .filter((s) => s.userId !== null)
       .map(shiftLine),
-    presenceWindows: (context.availability ?? []).map((window) => ({
-      userId: window.userId,
-      start: new Date(window.startMs).toISOString(),
-      end: new Date(window.endMs).toISOString(),
-    })),
+    presenceWindows: (context.availability ?? [])
+      .filter((window) => assignableIds.has(window.userId))
+      .map((window) => ({
+        userId: window.userId,
+        start: new Date(window.startMs).toISOString(),
+        end: new Date(window.endMs).toISOString(),
+      })),
     // traineeId null = an open slot the plan should fill with a trainee.
     trainingSessions: (context.trainingSessions ?? []).map((session) => ({
       sessionId: session.id,
@@ -104,9 +113,10 @@ export function buildAutoFillPrompt(
       end: new Date(session.endMs).toISOString(),
     })),
   };
+  // Compact JSON — indentation costs ~30% more tokens on a full day.
   let prompt =
     'Fill the open shifts and the open training sessions.' +
-    `\n\nContext:\n${JSON.stringify(payload, null, 1)}`;
+    `\n\nContext:\n${JSON.stringify(payload)}`;
   if (instructions) {
     prompt +=
       '\n\nManager instructions (soft preferences — never override the ' +

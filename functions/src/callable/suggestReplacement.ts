@@ -99,6 +99,8 @@ export const suggestReplacement = onCall(
         schema: ReplacementRankingSchema,
         system: REPLACEMENT_SYSTEM,
         prompt: buildReplacementPrompt(openShift, candidates, context),
+        // Leave headroom inside the callable's 120s budget for the fallback.
+        abortSignal: AbortSignal.timeout(100_000),
       });
       const ranked = ranking.candidates
         .filter((candidate) => candidateIds.has(candidate.userId))
